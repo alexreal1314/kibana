@@ -203,18 +203,6 @@ const buildEsqlQuery = ({
     entity.target.id,
     target.entity.id
   )
-| EVAL detectedActorEntityType = CASE(
-    user.entity.id IS NOT NULL, "user",
-    host.entity.id IS NOT NULL, "host",
-    service.entity.id IS NOT NULL, "service",
-    ""
-  )
-| EVAL detectedTargetEntityType = CASE(
-    user.target.entity.id IS NOT NULL, "user",
-    host.target.entity.id IS NOT NULL, "host",
-    service.target.entity.id IS NOT NULL, "service",
-    ""
-  )
 ${
   isEnrichPolicyExists
     ? `
