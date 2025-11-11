@@ -203,6 +203,20 @@ const buildEsqlQuery = ({
     entity.target.id,
     target.entity.id
   )
+| EVAL actorEntityFieldHint = CASE(
+    user.entity.id IS NOT NULL, "user",
+    host.entity.id IS NOT NULL, "host",
+    service.entity.id IS NOT NULL, "service",
+    entity.id IS NOT NULL, "entity",
+    null
+  )
+| EVAL targetEntityFieldHint = CASE(
+    user.target.entity.id IS NOT NULL, "user",
+    host.target.entity.id IS NOT NULL, "host",
+    service.target.entity.id IS NOT NULL, "service",
+    entity.target.id IS NOT NULL, "entity",
+    null
+  )
 ${
   isEnrichPolicyExists
     ? `
@@ -330,13 +344,15 @@ ${
   actorLabel = VALUES(actorLabel),
   actorsDocData = VALUES(actorDocData),
   actorHostIp = VALUES(actorHostIp),
+  actorEntityFieldHint = VALUES(actorEntityFieldHint),
   // target attributes
   targetEntityGroup = VALUES(targetEntityGroup),
   targetIds = VALUES(targetEntityId),
   targetIdsCount = COUNT_DISTINCT(targetEntityId),
   targetEntityType = VALUES(targetEntityType),
   targetLabel = VALUES(targetLabel),
-  targetsDocData = VALUES(targetDocData)
+  targetsDocData = VALUES(targetDocData),
+  targetEntityFieldHint = VALUES(targetEntityFieldHint)
     BY action = event.action,
       actorEntityGroup,
       targetEntityGroup,

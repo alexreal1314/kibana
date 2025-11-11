@@ -457,4 +457,103 @@ describe('fetchGraph', () => {
       expect(targetFilter).toBeTruthy();
     });
   });
+
+  describe('Entity field hint detection', () => {
+    it('should include actorEntityFieldHint and targetEntityFieldHint in ESQL query', async () => {
+      const validIndexPatterns = ['valid_index'];
+      const params = {
+        esClient,
+        logger,
+        start: 0,
+        end: 1000,
+        originEventIds: [] as OriginEventId[],
+        showUnknownTarget: false,
+        indexPatterns: validIndexPatterns,
+        spaceId: 'default',
+        esQuery: undefined as EsQuery | undefined,
+      };
+
+      await fetchGraph(params);
+
+      expect(esClient.asCurrentUser.helpers.esql).toBeCalledTimes(1);
+      const esqlCallArgs = esClient.asCurrentUser.helpers.esql.mock.calls[0];
+      const query = esqlCallArgs[0].query;
+
+      // Verify that actorEntityFieldHint is calculated
+      expect(query).toContain('actorEntityFieldHint = CASE(');
+      expect(query).toContain('user.entity.id IS NOT NULL, "user"');
+      expect(query).toContain('host.entity.id IS NOT NULL, "host"');
+      expect(query).toContain('service.entity.id IS NOT NULL, "service"');
+      expect(query).toContain('entity.id IS NOT NULL, "entity"');
+
+      // Verify that targetEntityFieldHint is calculated
+      expect(query).toContain('targetEntityFieldHint = CASE(');
+      expect(query).toContain('user.target.entity.id IS NOT NULL, "user"');
+      expect(query).toContain('host.target.entity.id IS NOT NULL, "host"');
+      expect(query).toContain('service.target.entity.id IS NOT NULL, "service"');
+      expect(query).toContain('entity.target.id IS NOT NULL, "entity"');
+    });
+
+    it('should include entity field hints in STATS aggregation', async () => {
+      const validIndexPatterns = ['valid_index'];
+      const params = {
+        esClient,
+        logger,
+        start: 0,
+        end: 1000,
+        originEventIds: [] as OriginEventId[],
+        showUnknownTarget: false,
+        indexPatterns: validIndexPatterns,
+        spaceId: 'default',
+        esQuery: undefined as EsQuery | undefined,
+      };
+
+      await fetchGraph(params);
+
+      expect(esClient.asCurrentUser.helpers.esql).toBeCalledTimes(1);
+      const esqlCallArgs = esClient.asCurrentUser.helpers.esql.mock.calls[0];
+      const query = esqlCallArgs[0].query;
+
+      // Verify that hints are included in STATS aggregation
+      expect(query).toContain('actorEntityFieldHint = VALUES(actorEntityFieldHint)');
+      expect(query).toContain('targetEntityFieldHint = VALUES(targetEntityFieldHint)');
+    });
+
+    it('should detect entity field hint priority correctly (user > host > service > entity)', async () => {
+      const validIndexPatterns = ['valid_index'];
+      const params = {
+        esClient,
+        logger,
+        start: 0,
+        end: 1000,
+        originEventIds: [] as OriginEventId[],
+        showUnknownTarget: false,
+        indexPatterns: validIndexPatterns,
+        spaceId: 'default',
+        esQuery: undefined as EsQuery | undefined,
+      };
+
+      await fetchGraph(params);
+
+      expect(esClient.asCurrentUser.helpers.esql).toBeCalledTimes(1);
+      const esqlCallArgs = esClient.asCurrentUser.helpers.esql.mock.calls[0];
+      const query = esqlCallArgs[0].query;
+
+      // Verify the CASE statement order matches priority
+      const actorHintMatch = query.match(/actorEntityFieldHint = CASE\(([\s\S]*?)\)/);
+      expect(actorHintMatch).toBeTruthy();
+      if (actorHintMatch) {
+        const caseBody = actorHintMatch[1];
+        const userIndex = caseBody.indexOf('user.entity.id');
+        const hostIndex = caseBody.indexOf('host.entity.id');
+        const serviceIndex = caseBody.indexOf('service.entity.id');
+        const entityIndex = caseBody.indexOf('entity.id IS NOT NULL, "entity"');
+
+        // Verify user comes before host, host before service, service before entity
+        expect(userIndex).toBeLessThan(hostIndex);
+        expect(hostIndex).toBeLessThan(serviceIndex);
+        expect(serviceIndex).toBeLessThan(entityIndex);
+      }
+    });
+  });
 });
