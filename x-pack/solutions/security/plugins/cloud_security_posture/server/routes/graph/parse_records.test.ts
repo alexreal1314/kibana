@@ -954,7 +954,7 @@ describe('parseRecords', () => {
   });
 
   describe('additional edge cases', () => {
-    it('handles empty documentsData when no entity documents exist', () => {
+    it('handles empty documentsData when no entity documents exist and no hints', () => {
       const records: GraphEdge[] = [
         {
           action: 'login',
@@ -985,15 +985,146 @@ describe('parseRecords', () => {
       ];
       const result = parseRecords(mockLogger, records);
 
-      // Check user group node - should have empty documentsData since no actor documents
       const userNode = result.nodes.find((n) => n.id === 'user1') as EntityNodeDataModel;
       expect(userNode).toBeDefined();
       expect(userNode.documentsData).toEqual([]);
 
-      // Check service group node - should have empty documentsData since no target documents
       const serviceNode = result.nodes.find((n) => n.id === 'service1') as EntityNodeDataModel;
       expect(serviceNode).toBeDefined();
       expect(serviceNode.documentsData).toEqual([]);
+    });
+  });
+
+  describe('sourceNamespaceField handling', () => {
+    it('creates synthetic document with sourceNamespaceField when actorsDocData is empty but hint exists', () => {
+      const records: GraphEdge[] = [
+        {
+          action: 'login',
+          actorIds: ['user1'],
+          targetIds: ['service1'],
+          actorEntityGroup: 'user',
+          targetEntityGroup: 'service',
+          actorEntityType: 'user',
+          targetEntityType: 'service',
+          actorLabel: 'User',
+          targetLabel: 'Service',
+          actorIdsCount: 1,
+          targetIdsCount: 1,
+          actorsDocData: undefined,
+          targetsDocData: ['{"id":"service1","type":"entity"}'],
+          actorEntityFieldHint: 'user',
+          targetEntityFieldHint: 'service',
+          badge: 1,
+          uniqueEventsCount: 1,
+          uniqueAlertsCount: 0,
+          docs: ['{"foo":"bar"}'],
+          isOrigin: true,
+          isOriginAlert: false,
+          isAlert: false,
+          actorHostIps: [],
+          targetHostIps: [],
+          sourceIps: [],
+          sourceCountryCodes: [],
+        },
+      ];
+      const result = parseRecords(mockLogger, records);
+
+      const userNode = result.nodes.find((n) => n.id === 'user1') as EntityNodeDataModel;
+      expect(userNode).toBeDefined();
+      expect(userNode.documentsData).toHaveLength(1);
+      expect(userNode.documentsData![0]).toEqual({
+        id: 'user1',
+        type: 'entity',
+        sourceNamespaceField: 'user',
+      });
+    });
+
+    it('creates synthetic document with sourceNamespaceField when targetsDocData is empty but hint exists', () => {
+      const records: GraphEdge[] = [
+        {
+          action: 'login',
+          actorIds: ['user1'],
+          targetIds: ['service1'],
+          actorEntityGroup: 'user',
+          targetEntityGroup: 'service',
+          actorEntityType: 'user',
+          targetEntityType: 'service',
+          actorLabel: 'User',
+          targetLabel: 'Service',
+          actorIdsCount: 1,
+          targetIdsCount: 1,
+          actorsDocData: ['{"id":"user1","type":"entity"}'],
+          targetsDocData: undefined,
+          actorEntityFieldHint: 'user',
+          targetEntityFieldHint: 'entity',
+          badge: 1,
+          uniqueEventsCount: 1,
+          uniqueAlertsCount: 0,
+          docs: ['{"foo":"bar"}'],
+          isOrigin: true,
+          isOriginAlert: false,
+          isAlert: false,
+          actorHostIps: [],
+          targetHostIps: [],
+          sourceIps: [],
+          sourceCountryCodes: [],
+        },
+      ];
+      const result = parseRecords(mockLogger, records);
+
+      const serviceNode = result.nodes.find((n) => n.id === 'service1') as EntityNodeDataModel;
+      expect(serviceNode).toBeDefined();
+      expect(serviceNode.documentsData).toHaveLength(1);
+      expect(serviceNode.documentsData![0]).toEqual({
+        id: 'service1',
+        type: 'entity',
+        sourceNamespaceField: 'entity',
+      });
+    });
+
+    it('adds sourceNamespaceField to each document from corresponding array index', () => {
+      const records: GraphEdge[] = [
+        {
+          action: 'login',
+          actorIds: ['user1'],
+          targetIds: ['service1'],
+          actorEntityGroup: 'user',
+          targetEntityGroup: 'service',
+          actorEntityType: 'user',
+          targetEntityType: 'service',
+          actorLabel: 'User',
+          targetLabel: 'Service',
+          actorIdsCount: 1,
+          targetIdsCount: 1,
+          actorsDocData: ['{"id":"user1","type":"entity"}', '{"id":"user2","type":"entity"}'],
+          targetsDocData: ['{"id":"service1","type":"entity"}'],
+          actorEntityFieldHint: ['user', 'host'],
+          targetEntityFieldHint: ['service'],
+          badge: 1,
+          uniqueEventsCount: 1,
+          uniqueAlertsCount: 0,
+          docs: ['{"foo":"bar"}'],
+          isOrigin: true,
+          isOriginAlert: false,
+          isAlert: false,
+          actorHostIps: [],
+          targetHostIps: [],
+          sourceIps: [],
+          sourceCountryCodes: [],
+        },
+      ];
+      const result = parseRecords(mockLogger, records);
+
+      const userNode = result.nodes.find((n) => n.id === 'user1') as EntityNodeDataModel;
+      expect(userNode).toBeDefined();
+      expect(userNode.documentsData).toHaveLength(2);
+      expect(userNode.documentsData![0].sourceNamespaceField).toBe('user');
+      expect(userNode.documentsData![1].sourceNamespaceField).toBe('host');
+
+      const serviceNode = result.nodes.find((n) => n.id === 'service1') as EntityNodeDataModel;
+      expect(serviceNode).toBeDefined();
+      expect(serviceNode.documentsData).toHaveLength(1);
+      expect(serviceNode.documentsData![0].sourceNamespaceField).toBe('service');
     });
   });
 });

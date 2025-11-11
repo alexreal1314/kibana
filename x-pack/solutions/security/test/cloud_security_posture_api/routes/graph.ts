@@ -1202,6 +1202,117 @@ export default function (providerContext: FtrProviderContext) {
           });
         });
       });
+
+      describe('Source namespace field', () => {
+        it('should include sourceNamespaceField in documentsData', async () => {
+          const response = await postGraph(supertest, {
+            query: {
+              indexPatterns: ['.alerts-security.alerts-*', 'logs-*'],
+              originEventIds: [{ id: 'kabcd1234efgh5678', isAlert: true }],
+              start: '2024-09-01T00:00:00Z',
+              end: '2024-09-02T00:00:00Z',
+            },
+          }).expect(result(200));
+
+          expect(response.body).to.have.property('nodes');
+          
+          // Find entity nodes (non-label nodes)
+          const entityNodes = response.body.nodes.filter(
+            (node: NodeDataModel) => !isLabelNode(node)
+          ) as EntityNodeDataModel[];
+
+          expect(entityNodes.length).to.be.greaterThan(0);
+
+          // Check that documents have sourceNamespaceField
+          const nodesWithDocuments = entityNodes.filter(
+            (node) => node.documentsData && node.documentsData.length > 0
+          );
+
+          expect(nodesWithDocuments.length).to.be.greaterThan(0);
+
+          nodesWithDocuments.forEach((node) => {
+            const docsWithNamespace = node.documentsData!.filter((doc) => doc.sourceNamespaceField);
+            expect(docsWithNamespace.length).to.be.greaterThan(0);
+            
+            docsWithNamespace.forEach((doc) => {
+              expect(['user', 'host', 'service', 'entity']).to.contain(doc.sourceNamespaceField);
+            });
+          });
+        });
+
+        it('should filter by user.entity.id when sourceNamespaceField is "user"', async () => {
+          const response = await postGraph(supertest, {
+            query: {
+              indexPatterns: ['.alerts-security.alerts-*', 'logs-*'],
+              originEventIds: [],
+              start: '2024-09-01T00:00:00Z',
+              end: '2024-09-02T00:00:00Z',
+              esQuery: {
+                bool: {
+                  filter: [
+                    {
+                      match_phrase: {
+                        'user.entity.id': 'admin@example.com',
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          }).expect(result(200));
+
+          expect(response.body).to.have.property('nodes');
+          expect(response.body.nodes.length).to.be.greaterThan(0);
+
+          // Find entity nodes with documents containing user namespace
+          const entityNodes = response.body.nodes.filter(
+            (node: NodeDataModel) => !isLabelNode(node)
+          ) as EntityNodeDataModel[];
+
+          const nodesWithUserDocs = entityNodes.filter(
+            (node) =>
+              node.documentsData &&
+              node.documentsData.some((doc) => doc.sourceNamespaceField === 'user')
+          );
+          expect(nodesWithUserDocs.length).to.be.greaterThan(0);
+
+          // Verify the user node has the correct ID
+          const matchingNode = nodesWithUserDocs.find((node) => node.id === 'admin@example.com');
+          expect(matchingNode).to.not.be(undefined);
+        });
+
+        it('should handle entities without namespace hint (legacy actor.entity.id)', async () => {
+          const response = await postGraph(supertest, {
+            query: {
+              indexPatterns: ['.alerts-security.alerts-*', 'logs-*'],
+              originEventIds: [],
+              start: '2024-09-01T00:00:00Z',
+              end: '2024-09-02T00:00:00Z',
+              esQuery: {
+                bool: {
+                  filter: [
+                    {
+                      match_phrase: {
+                        'actor.entity.id': 'admin@example.com',
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          }).expect(result(200));
+
+          expect(response.body).to.have.property('nodes');
+          expect(response.body.nodes.length).to.be.greaterThan(0);
+
+          // Verify that nodes are returned even when filtering by legacy field
+          const entityNodes = response.body.nodes.filter(
+            (node: NodeDataModel) => !isLabelNode(node)
+          ) as EntityNodeDataModel[];
+
+          expect(entityNodes.length).to.be.greaterThan(0);
+        });
+      });
     });
 
     describe('Only ECS fields for actor and target', () => {

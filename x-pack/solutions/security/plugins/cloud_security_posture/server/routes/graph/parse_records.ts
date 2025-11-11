@@ -118,6 +118,7 @@ const createGroupedActorAndTargetNodes = (
     actorEntityType,
     actorLabel,
     actorHostIps,
+    actorEntityFieldHint,
     // target attributes
     targetIds,
     targetIdsCount,
@@ -125,34 +126,76 @@ const createGroupedActorAndTargetNodes = (
     targetEntityType,
     targetLabel,
     targetHostIps,
+    targetEntityFieldHint,
   } = record;
-
   const actorHostIpsArray = actorHostIps ? castArray(actorHostIps) : [];
   const targetHostIpsArray = targetHostIps ? castArray(targetHostIps) : [];
 
+  // Convert namespace hints to arrays - each document has its own entity root namespace
+  const actorNamespaceArray = actorEntityFieldHint ? castArray(actorEntityFieldHint) : [];
+  const targetNamespaceArray = targetEntityFieldHint ? castArray(targetEntityFieldHint) : [];
+
   const actorsDocDataArray: NodeDocumentDataModel[] = actorsDocData
     ? castArray(actorsDocData)
-        .filter((actorData): actorData is string => actorData !== null && actorData !== undefined)
-        .map((actorData) => JSON.parse(actorData))
+        .map((actorData, index) => {
+          if (actorData === null || actorData === undefined) {
+            return null;
+          }
+          return {
+            ...JSON.parse(actorData),
+            sourceNamespaceField: actorNamespaceArray[index],
+          };
+        })
+        .filter((doc): doc is NodeDocumentDataModel => doc !== null)
     : [];
 
   const targetsDocDataArray: NodeDocumentDataModel[] = targetsDocData
     ? castArray(targetsDocData)
-        .filter(
-          (targetData): targetData is string => targetData !== null && targetData !== undefined
-        )
-        .map((targetData) => JSON.parse(targetData))
+        .map((targetData, index) => {
+          if (targetData === null || targetData === undefined) {
+            return null;
+          }
+          return {
+            ...JSON.parse(targetData),
+            sourceNamespaceField: targetNamespaceArray[index],
+          };
+        })
+        .filter((doc): doc is NodeDocumentDataModel => doc !== null)
     : [];
 
   const actorIdsArray = castArray(actorIds);
   const targetIdsArray = castArray(targetIds);
+
+  // If we have a namespace hint but no documents, create a minimal document with just id and hint
+  // This ensures the hint is preserved for filtering
+  const actorDocDataWithHint =
+    actorsDocDataArray.length === 0 && actorNamespaceArray.length > 0 && actorIdsCount > 0
+      ? [
+          {
+            id: actorIdsArray[0],
+            type: 'entity' as const,
+            sourceNamespaceField: actorNamespaceArray[0],
+          },
+        ]
+      : actorsDocDataArray;
+
+  const targetDocDataWithHint =
+    targetsDocDataArray.length === 0 && targetNamespaceArray.length > 0 && targetIdsCount > 0
+      ? [
+          {
+            id: targetIdsArray[0]!,
+            type: 'entity' as const,
+            sourceNamespaceField: targetNamespaceArray[0],
+          },
+        ]
+      : targetsDocDataArray;
 
   const actorGroup = {
     id: actorIdsCount > 0 ? actorIdsArray[0] : `${actorEntityGroup} ${uuidv4()}`,
     type: actorEntityType,
     label: actorLabel,
     count: actorIdsCount,
-    docData: actorsDocDataArray,
+    docData: actorDocDataWithHint,
     hostIps: actorHostIpsArray,
   };
 
@@ -163,7 +206,7 @@ const createGroupedActorAndTargetNodes = (
           type: targetEntityType,
           label: targetLabel,
           count: targetIdsCount,
-          docData: targetsDocDataArray,
+          docData: targetDocDataWithHint,
           hostIps: targetHostIpsArray,
         }
       : {
