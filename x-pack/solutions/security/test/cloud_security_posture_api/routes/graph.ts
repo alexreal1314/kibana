@@ -1386,7 +1386,6 @@ export default function (providerContext: FtrProviderContext) {
           expect(response.body).to.have.property('edges').length(2);
           expect(response.body).not.to.have.property('messages');
 
-          // Find the actor node and verify entity enrichment
           const actorNode = response.body.nodes.find(
             (node: NodeDataModel) => node.id === 'entity-user@example.com'
           ) as EntityNodeDataModel;
@@ -1396,7 +1395,6 @@ export default function (providerContext: FtrProviderContext) {
           expect(actorNode.shape).to.equal('ellipse');
           expect(actorNode.tag).to.equal('Identity');
 
-          // Find the target node (service.target.entity.id) and verify entity enrichment
           const serviceTargetNode = response.body.nodes.find(
             (node: NodeDataModel) => node.id === 'entity-service-target-1'
           ) as EntityNodeDataModel;
@@ -1405,7 +1403,6 @@ export default function (providerContext: FtrProviderContext) {
           expect(serviceTargetNode.shape).to.equal('rectangle');
           expect(serviceTargetNode.tag).to.equal('Compute');
 
-          // Verify label node has both event and alert
           const labelNode = response.body.nodes.find(
             (node: NodeDataModel) => node.shape === 'label'
           ) as LabelNodeDataModel;
@@ -1423,7 +1420,6 @@ export default function (providerContext: FtrProviderContext) {
             })
           );
 
-          // Verify edges
           response.body.edges.forEach((edge: EdgeDataModel) => {
             expect(edge).to.have.property('color');
             expect(edge.color).equal(
