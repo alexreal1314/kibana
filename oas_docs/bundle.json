@@ -49604,7 +49604,8 @@
                         "running",
                         "upcoming",
                         "finished",
-                        "archived"
+                        "archived",
+                        "disabled"
                       ],
                       "type": "string"
                     },
@@ -49677,7 +49678,7 @@
             }
           },
           {
-            "description": "The status of the maintenance window. One of \"running\", \"upcoming\", \"finished\" or \"archived\".",
+            "description": "The status of the maintenance window. One of \"running\", \"upcoming\", \"finished\", \"archived\", or \"disabled\".",
             "in": "query",
             "name": "status",
             "required": false,
@@ -49688,7 +49689,8 @@
                     "running",
                     "finished",
                     "upcoming",
-                    "archived"
+                    "archived",
+                    "disabled"
                   ],
                   "type": "string"
                 },
@@ -49698,7 +49700,8 @@
                       "running",
                       "finished",
                       "upcoming",
-                      "archived"
+                      "archived",
+                      "disabled"
                     ],
                     "type": "string"
                   },
@@ -49867,7 +49870,8 @@
                               "running",
                               "upcoming",
                               "finished",
-                              "archived"
+                              "archived",
+                              "disabled"
                             ],
                             "type": "string"
                           },
@@ -50126,7 +50130,8 @@
                         "running",
                         "upcoming",
                         "finished",
-                        "archived"
+                        "archived",
+                        "disabled"
                       ],
                       "type": "string"
                     },
@@ -50460,7 +50465,8 @@
                         "running",
                         "upcoming",
                         "finished",
-                        "archived"
+                        "archived",
+                        "disabled"
                       ],
                       "type": "string"
                     },
@@ -50671,7 +50677,8 @@
                         "running",
                         "upcoming",
                         "finished",
-                        "archived"
+                        "archived",
+                        "disabled"
                       ],
                       "type": "string"
                     },
@@ -50879,7 +50886,8 @@
                         "running",
                         "upcoming",
                         "finished",
-                        "archived"
+                        "archived",
+                        "disabled"
                       ],
                       "type": "string"
                     },
@@ -53622,6 +53630,93 @@
                                           "ingest": {
                                             "additionalProperties": false,
                                             "properties": {
+                                              "failure_store": {
+                                                "anyOf": [
+                                                  {
+                                                    "additionalProperties": false,
+                                                    "properties": {
+                                                      "inherit": {
+                                                        "additionalProperties": false,
+                                                        "properties": {},
+                                                        "type": "object"
+                                                      }
+                                                    },
+                                                    "required": [
+                                                      "inherit"
+                                                    ],
+                                                    "type": "object"
+                                                  },
+                                                  {
+                                                    "additionalProperties": false,
+                                                    "properties": {
+                                                      "disabled": {
+                                                        "additionalProperties": false,
+                                                        "properties": {},
+                                                        "type": "object"
+                                                      }
+                                                    },
+                                                    "required": [
+                                                      "disabled"
+                                                    ],
+                                                    "type": "object"
+                                                  },
+                                                  {
+                                                    "anyOf": [
+                                                      {
+                                                        "additionalProperties": false,
+                                                        "properties": {
+                                                          "lifecycle": {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                              "enabled": {
+                                                                "additionalProperties": false,
+                                                                "properties": {
+                                                                  "data_retention": {
+                                                                    "minLength": 1,
+                                                                    "type": "string"
+                                                                  }
+                                                                },
+                                                                "type": "object"
+                                                              }
+                                                            },
+                                                            "required": [
+                                                              "enabled"
+                                                            ],
+                                                            "type": "object"
+                                                          }
+                                                        },
+                                                        "required": [
+                                                          "lifecycle"
+                                                        ],
+                                                        "type": "object"
+                                                      },
+                                                      {
+                                                        "additionalProperties": false,
+                                                        "properties": {
+                                                          "lifecycle": {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                              "disabled": {
+                                                                "additionalProperties": false,
+                                                                "properties": {},
+                                                                "type": "object"
+                                                              }
+                                                            },
+                                                            "required": [
+                                                              "disabled"
+                                                            ],
+                                                            "type": "object"
+                                                          }
+                                                        },
+                                                        "required": [
+                                                          "lifecycle"
+                                                        ],
+                                                        "type": "object"
+                                                      }
+                                                    ]
+                                                  }
+                                                ]
+                                              },
                                               "lifecycle": {
                                                 "anyOf": [
                                                   {
@@ -57678,7 +57773,8 @@
                                             "required": [
                                               "lifecycle",
                                               "processing",
-                                              "settings"
+                                              "settings",
+                                              "failure_store"
                                             ],
                                             "type": "object"
                                           }
@@ -58551,6 +58647,93 @@
                                       "ingest": {
                                         "additionalProperties": false,
                                         "properties": {
+                                          "failure_store": {
+                                            "anyOf": [
+                                              {
+                                                "additionalProperties": false,
+                                                "properties": {
+                                                  "inherit": {
+                                                    "additionalProperties": false,
+                                                    "properties": {},
+                                                    "type": "object"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "inherit"
+                                                ],
+                                                "type": "object"
+                                              },
+                                              {
+                                                "additionalProperties": false,
+                                                "properties": {
+                                                  "disabled": {
+                                                    "additionalProperties": false,
+                                                    "properties": {},
+                                                    "type": "object"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "disabled"
+                                                ],
+                                                "type": "object"
+                                              },
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "additionalProperties": false,
+                                                    "properties": {
+                                                      "lifecycle": {
+                                                        "additionalProperties": false,
+                                                        "properties": {
+                                                          "enabled": {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                              "data_retention": {
+                                                                "minLength": 1,
+                                                                "type": "string"
+                                                              }
+                                                            },
+                                                            "type": "object"
+                                                          }
+                                                        },
+                                                        "required": [
+                                                          "enabled"
+                                                        ],
+                                                        "type": "object"
+                                                      }
+                                                    },
+                                                    "required": [
+                                                      "lifecycle"
+                                                    ],
+                                                    "type": "object"
+                                                  },
+                                                  {
+                                                    "additionalProperties": false,
+                                                    "properties": {
+                                                      "lifecycle": {
+                                                        "additionalProperties": false,
+                                                        "properties": {
+                                                          "disabled": {
+                                                            "additionalProperties": false,
+                                                            "properties": {},
+                                                            "type": "object"
+                                                          }
+                                                        },
+                                                        "required": [
+                                                          "disabled"
+                                                        ],
+                                                        "type": "object"
+                                                      }
+                                                    },
+                                                    "required": [
+                                                      "lifecycle"
+                                                    ],
+                                                    "type": "object"
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          },
                                           "lifecycle": {
                                             "anyOf": [
                                               {
@@ -62607,7 +62790,8 @@
                                         "required": [
                                           "lifecycle",
                                           "processing",
-                                          "settings"
+                                          "settings",
+                                          "failure_store"
                                         ],
                                         "type": "object"
                                       }
@@ -63073,6 +63257,93 @@
                                           "ingest": {
                                             "additionalProperties": false,
                                             "properties": {
+                                              "failure_store": {
+                                                "anyOf": [
+                                                  {
+                                                    "additionalProperties": false,
+                                                    "properties": {
+                                                      "inherit": {
+                                                        "additionalProperties": false,
+                                                        "properties": {},
+                                                        "type": "object"
+                                                      }
+                                                    },
+                                                    "required": [
+                                                      "inherit"
+                                                    ],
+                                                    "type": "object"
+                                                  },
+                                                  {
+                                                    "additionalProperties": false,
+                                                    "properties": {
+                                                      "disabled": {
+                                                        "additionalProperties": false,
+                                                        "properties": {},
+                                                        "type": "object"
+                                                      }
+                                                    },
+                                                    "required": [
+                                                      "disabled"
+                                                    ],
+                                                    "type": "object"
+                                                  },
+                                                  {
+                                                    "anyOf": [
+                                                      {
+                                                        "additionalProperties": false,
+                                                        "properties": {
+                                                          "lifecycle": {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                              "enabled": {
+                                                                "additionalProperties": false,
+                                                                "properties": {
+                                                                  "data_retention": {
+                                                                    "minLength": 1,
+                                                                    "type": "string"
+                                                                  }
+                                                                },
+                                                                "type": "object"
+                                                              }
+                                                            },
+                                                            "required": [
+                                                              "enabled"
+                                                            ],
+                                                            "type": "object"
+                                                          }
+                                                        },
+                                                        "required": [
+                                                          "lifecycle"
+                                                        ],
+                                                        "type": "object"
+                                                      },
+                                                      {
+                                                        "additionalProperties": false,
+                                                        "properties": {
+                                                          "lifecycle": {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                              "disabled": {
+                                                                "additionalProperties": false,
+                                                                "properties": {},
+                                                                "type": "object"
+                                                              }
+                                                            },
+                                                            "required": [
+                                                              "disabled"
+                                                            ],
+                                                            "type": "object"
+                                                          }
+                                                        },
+                                                        "required": [
+                                                          "lifecycle"
+                                                        ],
+                                                        "type": "object"
+                                                      }
+                                                    ]
+                                                  }
+                                                ]
+                                              },
                                               "lifecycle": {
                                                 "anyOf": [
                                                   {
@@ -67129,7 +67400,8 @@
                                             "required": [
                                               "lifecycle",
                                               "processing",
-                                              "settings"
+                                              "settings",
+                                              "failure_store"
                                             ],
                                             "type": "object"
                                           }
@@ -67698,6 +67970,93 @@
                                       "ingest": {
                                         "additionalProperties": false,
                                         "properties": {
+                                          "failure_store": {
+                                            "anyOf": [
+                                              {
+                                                "additionalProperties": false,
+                                                "properties": {
+                                                  "inherit": {
+                                                    "additionalProperties": false,
+                                                    "properties": {},
+                                                    "type": "object"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "inherit"
+                                                ],
+                                                "type": "object"
+                                              },
+                                              {
+                                                "additionalProperties": false,
+                                                "properties": {
+                                                  "disabled": {
+                                                    "additionalProperties": false,
+                                                    "properties": {},
+                                                    "type": "object"
+                                                  }
+                                                },
+                                                "required": [
+                                                  "disabled"
+                                                ],
+                                                "type": "object"
+                                              },
+                                              {
+                                                "anyOf": [
+                                                  {
+                                                    "additionalProperties": false,
+                                                    "properties": {
+                                                      "lifecycle": {
+                                                        "additionalProperties": false,
+                                                        "properties": {
+                                                          "enabled": {
+                                                            "additionalProperties": false,
+                                                            "properties": {
+                                                              "data_retention": {
+                                                                "minLength": 1,
+                                                                "type": "string"
+                                                              }
+                                                            },
+                                                            "type": "object"
+                                                          }
+                                                        },
+                                                        "required": [
+                                                          "enabled"
+                                                        ],
+                                                        "type": "object"
+                                                      }
+                                                    },
+                                                    "required": [
+                                                      "lifecycle"
+                                                    ],
+                                                    "type": "object"
+                                                  },
+                                                  {
+                                                    "additionalProperties": false,
+                                                    "properties": {
+                                                      "lifecycle": {
+                                                        "additionalProperties": false,
+                                                        "properties": {
+                                                          "disabled": {
+                                                            "additionalProperties": false,
+                                                            "properties": {},
+                                                            "type": "object"
+                                                          }
+                                                        },
+                                                        "required": [
+                                                          "disabled"
+                                                        ],
+                                                        "type": "object"
+                                                      }
+                                                    },
+                                                    "required": [
+                                                      "lifecycle"
+                                                    ],
+                                                    "type": "object"
+                                                  }
+                                                ]
+                                              }
+                                            ]
+                                          },
                                           "lifecycle": {
                                             "anyOf": [
                                               {
@@ -71754,7 +72113,8 @@
                                         "required": [
                                           "lifecycle",
                                           "processing",
-                                          "settings"
+                                          "settings",
+                                          "failure_store"
                                         ],
                                         "type": "object"
                                       }
@@ -72804,6 +73164,93 @@
                         "allOf": [
                           {
                             "properties": {
+                              "failure_store": {
+                                "anyOf": [
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "inherit": {
+                                        "additionalProperties": false,
+                                        "properties": {},
+                                        "type": "object"
+                                      }
+                                    },
+                                    "required": [
+                                      "inherit"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "disabled": {
+                                        "additionalProperties": false,
+                                        "properties": {},
+                                        "type": "object"
+                                      }
+                                    },
+                                    "required": [
+                                      "disabled"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "anyOf": [
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "lifecycle": {
+                                            "additionalProperties": false,
+                                            "properties": {
+                                              "enabled": {
+                                                "additionalProperties": false,
+                                                "properties": {
+                                                  "data_retention": {
+                                                    "minLength": 1,
+                                                    "type": "string"
+                                                  }
+                                                },
+                                                "type": "object"
+                                              }
+                                            },
+                                            "required": [
+                                              "enabled"
+                                            ],
+                                            "type": "object"
+                                          }
+                                        },
+                                        "required": [
+                                          "lifecycle"
+                                        ],
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "lifecycle": {
+                                            "additionalProperties": false,
+                                            "properties": {
+                                              "disabled": {
+                                                "additionalProperties": false,
+                                                "properties": {},
+                                                "type": "object"
+                                              }
+                                            },
+                                            "required": [
+                                              "disabled"
+                                            ],
+                                            "type": "object"
+                                          }
+                                        },
+                                        "required": [
+                                          "lifecycle"
+                                        ],
+                                        "type": "object"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
                               "lifecycle": {
                                 "anyOf": [
                                   {
@@ -76860,7 +77307,8 @@
                             "required": [
                               "lifecycle",
                               "processing",
-                              "settings"
+                              "settings",
+                              "failure_store"
                             ],
                             "type": "object"
                           },
@@ -77298,6 +77746,93 @@
                         "allOf": [
                           {
                             "properties": {
+                              "failure_store": {
+                                "anyOf": [
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "inherit": {
+                                        "additionalProperties": false,
+                                        "properties": {},
+                                        "type": "object"
+                                      }
+                                    },
+                                    "required": [
+                                      "inherit"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "disabled": {
+                                        "additionalProperties": false,
+                                        "properties": {},
+                                        "type": "object"
+                                      }
+                                    },
+                                    "required": [
+                                      "disabled"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  {
+                                    "anyOf": [
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "lifecycle": {
+                                            "additionalProperties": false,
+                                            "properties": {
+                                              "enabled": {
+                                                "additionalProperties": false,
+                                                "properties": {
+                                                  "data_retention": {
+                                                    "minLength": 1,
+                                                    "type": "string"
+                                                  }
+                                                },
+                                                "type": "object"
+                                              }
+                                            },
+                                            "required": [
+                                              "enabled"
+                                            ],
+                                            "type": "object"
+                                          }
+                                        },
+                                        "required": [
+                                          "lifecycle"
+                                        ],
+                                        "type": "object"
+                                      },
+                                      {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "lifecycle": {
+                                            "additionalProperties": false,
+                                            "properties": {
+                                              "disabled": {
+                                                "additionalProperties": false,
+                                                "properties": {},
+                                                "type": "object"
+                                              }
+                                            },
+                                            "required": [
+                                              "disabled"
+                                            ],
+                                            "type": "object"
+                                          }
+                                        },
+                                        "required": [
+                                          "lifecycle"
+                                        ],
+                                        "type": "object"
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
                               "lifecycle": {
                                 "anyOf": [
                                   {
@@ -81354,7 +81889,8 @@
                             "required": [
                               "lifecycle",
                               "processing",
-                              "settings"
+                              "settings",
+                              "failure_store"
                             ],
                             "type": "object"
                           },
@@ -83154,129 +83690,82 @@
                 "additionalProperties": false,
                 "properties": {
                   "feature": {
-                    "additionalProperties": false,
-                    "properties": {
-                      "description": {
-                        "type": "string"
+                    "allOf": [
+                      {
+                        "properties": {
+                          "description": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "type": {
+                            "enum": [
+                              "system"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "name",
+                          "description"
+                        ],
+                        "type": "object"
                       },
-                      "filter": {
-                        "anyOf": [
-                          {
+                      {
+                        "properties": {
+                          "filter": {
                             "anyOf": [
                               {
-                                "additionalProperties": false,
-                                "properties": {
-                                  "contains": {
-                                    "anyOf": [
-                                      {
-                                        "type": "string"
-                                      },
-                                      {
-                                        "type": "number"
-                                      },
-                                      {
-                                        "type": "boolean"
-                                      }
-                                    ]
-                                  },
-                                  "endsWith": {
-                                    "anyOf": [
-                                      {
-                                        "type": "string"
-                                      },
-                                      {
-                                        "type": "number"
-                                      },
-                                      {
-                                        "type": "boolean"
-                                      }
-                                    ]
-                                  },
-                                  "eq": {
-                                    "anyOf": [
-                                      {
-                                        "type": "string"
-                                      },
-                                      {
-                                        "type": "number"
-                                      },
-                                      {
-                                        "type": "boolean"
-                                      }
-                                    ]
-                                  },
-                                  "field": {
-                                    "minLength": 1,
-                                    "type": "string"
-                                  },
-                                  "gt": {
-                                    "anyOf": [
-                                      {
-                                        "type": "string"
-                                      },
-                                      {
-                                        "type": "number"
-                                      },
-                                      {
-                                        "type": "boolean"
-                                      }
-                                    ]
-                                  },
-                                  "gte": {
-                                    "anyOf": [
-                                      {
-                                        "type": "string"
-                                      },
-                                      {
-                                        "type": "number"
-                                      },
-                                      {
-                                        "type": "boolean"
-                                      }
-                                    ]
-                                  },
-                                  "lt": {
-                                    "anyOf": [
-                                      {
-                                        "type": "string"
-                                      },
-                                      {
-                                        "type": "number"
-                                      },
-                                      {
-                                        "type": "boolean"
-                                      }
-                                    ]
-                                  },
-                                  "lte": {
-                                    "anyOf": [
-                                      {
-                                        "type": "string"
-                                      },
-                                      {
-                                        "type": "number"
-                                      },
-                                      {
-                                        "type": "boolean"
-                                      }
-                                    ]
-                                  },
-                                  "neq": {
-                                    "anyOf": [
-                                      {
-                                        "type": "string"
-                                      },
-                                      {
-                                        "type": "number"
-                                      },
-                                      {
-                                        "type": "boolean"
-                                      }
-                                    ]
-                                  },
-                                  "range": {
+                                "anyOf": [
+                                  {
                                     "additionalProperties": false,
                                     "properties": {
+                                      "contains": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          }
+                                        ]
+                                      },
+                                      "endsWith": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          }
+                                        ]
+                                      },
+                                      "eq": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          }
+                                        ]
+                                      },
+                                      "field": {
+                                        "minLength": 1,
+                                        "type": "string"
+                                      },
                                       "gt": {
                                         "anyOf": [
                                           {
@@ -83328,124 +83817,202 @@
                                             "type": "boolean"
                                           }
                                         ]
+                                      },
+                                      "neq": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          }
+                                        ]
+                                      },
+                                      "range": {
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "gt": {
+                                            "anyOf": [
+                                              {
+                                                "type": "string"
+                                              },
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "type": "boolean"
+                                              }
+                                            ]
+                                          },
+                                          "gte": {
+                                            "anyOf": [
+                                              {
+                                                "type": "string"
+                                              },
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "type": "boolean"
+                                              }
+                                            ]
+                                          },
+                                          "lt": {
+                                            "anyOf": [
+                                              {
+                                                "type": "string"
+                                              },
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "type": "boolean"
+                                              }
+                                            ]
+                                          },
+                                          "lte": {
+                                            "anyOf": [
+                                              {
+                                                "type": "string"
+                                              },
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "type": "boolean"
+                                              }
+                                            ]
+                                          }
+                                        },
+                                        "type": "object"
+                                      },
+                                      "startsWith": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          }
+                                        ]
                                       }
                                     },
+                                    "required": [
+                                      "field"
+                                    ],
                                     "type": "object"
                                   },
-                                  "startsWith": {
-                                    "anyOf": [
-                                      {
-                                        "type": "string"
-                                      },
-                                      {
-                                        "type": "number"
-                                      },
-                                      {
+                                  {
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "exists": {
                                         "type": "boolean"
+                                      },
+                                      "field": {
+                                        "minLength": 1,
+                                        "type": "string"
                                       }
-                                    ]
+                                    },
+                                    "required": [
+                                      "field"
+                                    ],
+                                    "type": "object"
+                                  }
+                                ]
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "and": {
+                                    "items": {},
+                                    "type": "array"
                                   }
                                 },
                                 "required": [
-                                  "field"
+                                  "and"
                                 ],
                                 "type": "object"
                               },
                               {
                                 "additionalProperties": false,
                                 "properties": {
-                                  "exists": {
-                                    "type": "boolean"
-                                  },
-                                  "field": {
-                                    "minLength": 1,
-                                    "type": "string"
+                                  "or": {
+                                    "items": {},
+                                    "type": "array"
                                   }
                                 },
                                 "required": [
-                                  "field"
+                                  "or"
+                                ],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "not": {}
+                                },
+                                "required": [
+                                  "not"
+                                ],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "never": {
+                                    "additionalProperties": false,
+                                    "properties": {},
+                                    "type": "object"
+                                  }
+                                },
+                                "required": [
+                                  "never"
+                                ],
+                                "type": "object"
+                              },
+                              {
+                                "additionalProperties": false,
+                                "properties": {
+                                  "always": {
+                                    "additionalProperties": false,
+                                    "properties": {},
+                                    "type": "object"
+                                  }
+                                },
+                                "required": [
+                                  "always"
                                 ],
                                 "type": "object"
                               }
                             ]
-                          },
-                          {
-                            "additionalProperties": false,
-                            "properties": {
-                              "and": {
-                                "items": {},
-                                "type": "array"
-                              }
-                            },
-                            "required": [
-                              "and"
-                            ],
-                            "type": "object"
-                          },
-                          {
-                            "additionalProperties": false,
-                            "properties": {
-                              "or": {
-                                "items": {},
-                                "type": "array"
-                              }
-                            },
-                            "required": [
-                              "or"
-                            ],
-                            "type": "object"
-                          },
-                          {
-                            "additionalProperties": false,
-                            "properties": {
-                              "not": {}
-                            },
-                            "required": [
-                              "not"
-                            ],
-                            "type": "object"
-                          },
-                          {
-                            "additionalProperties": false,
-                            "properties": {
-                              "never": {
-                                "additionalProperties": false,
-                                "properties": {},
-                                "type": "object"
-                              }
-                            },
-                            "required": [
-                              "never"
-                            ],
-                            "type": "object"
-                          },
-                          {
-                            "additionalProperties": false,
-                            "properties": {
-                              "always": {
-                                "additionalProperties": false,
-                                "properties": {},
-                                "type": "object"
-                              }
-                            },
-                            "required": [
-                              "always"
-                            ],
-                            "type": "object"
                           }
-                        ]
+                        },
+                        "required": [
+                          "filter"
+                        ],
+                        "type": "object"
                       },
-                      "name": {
-                        "minLength": 1,
-                        "type": "string"
+                      {
+                        "properties": {
+                          "type": {
+                            "enum": [
+                              "system"
+                            ],
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "type"
+                        ],
+                        "type": "object"
                       }
-                    },
-                    "required": [
-                      "name",
-                      "filter",
-                      "description"
-                    ],
-                    "type": "object"
+                    ]
                   }
                 },
                 "type": "object"
@@ -83798,7 +84365,6 @@
                             ]
                           },
                           "name": {
-                            "minLength": 1,
                             "type": "string"
                           }
                         },
