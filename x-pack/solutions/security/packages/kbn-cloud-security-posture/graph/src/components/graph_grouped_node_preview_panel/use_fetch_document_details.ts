@@ -9,6 +9,7 @@ import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@kbn/react-query';
 import { lastValueFrom } from 'rxjs';
 import { number } from 'io-ts';
+import { get } from 'lodash';
 import type { EsHitRecord } from '@kbn/discover-utils/types';
 import { useKibana } from '@kbn/kibana-react-plugin/public';
 import type { CoreStart } from '@kbn/core/public';
@@ -18,6 +19,10 @@ import {
   DOCUMENT_TYPE_EVENT,
   DOCUMENT_TYPE_ALERT,
 } from '@kbn/cloud-security-posture-common/schema/graph/v1';
+import {
+  GRAPH_ACTOR_ENTITY_FIELDS,
+  GRAPH_TARGET_ENTITY_FIELDS,
+} from '@kbn/cloud-security-posture-common/constants';
 import { showDetailsErrorToast } from '../utils';
 import type { EventItem, AlertItem } from './components/grouped_item/types';
 
@@ -100,6 +105,45 @@ const normalizeToArray = (value?: string | string[]): string[] | undefined => {
   return Array.isArray(value) ? value : [value];
 };
 
+/**
+ * Extracts the actor ID from a document using the fallback mechanism.
+ * Checks GRAPH_ACTOR_ENTITY_FIELDS in order and returns the first non-empty value.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const extractActorId = (hitSource: Record<string, any>): string | string[] | undefined => {
+  for (const field of GRAPH_ACTOR_ENTITY_FIELDS) {
+    const value = get(hitSource, field);
+    // Use loose equality to check for both null and undefined, and explicitly check for empty string
+    if (value != null && value !== '') {
+      return value;
+    }
+  }
+  return undefined;
+};
+
+/**
+ * Extracts all target IDs from a document by collecting values from all GRAPH_TARGET_ENTITY_FIELDS.
+ * Returns an array of all non-empty values found across all target fields.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const extractTargetId = (hitSource: Record<string, any>): string | string[] | undefined => {
+  const targetIds: string[] = [];
+
+  for (const field of GRAPH_TARGET_ENTITY_FIELDS) {
+    const value = get(hitSource, field);
+    // Use loose equality to check for both null and undefined, and explicitly check for empty string
+    if (value != null && value !== '') {
+      if (Array.isArray(value)) {
+        targetIds.push(...value.filter((v) => v != null && v !== ''));
+      } else {
+        targetIds.push(value);
+      }
+    }
+  }
+
+  return targetIds.length > 0 ? targetIds : undefined;
+};
+
 const buildItemFromHit = (hit: EsHitRecord): EventItem | AlertItem => {
   // TODO Fix typing issue and replace `any`
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -113,8 +157,8 @@ const buildItemFromHit = (hit: EsHitRecord): EventItem | AlertItem => {
     index: hit._index,
     timestamp: hitSource['@timestamp'],
     action: hitSource.event?.action,
-    actor: { id: hitSource.actor?.entity?.id },
-    target: { id: hitSource.target?.entity?.id },
+    actor: { id: extractActorId(hitSource) },
+    target: { id: extractTargetId(hitSource) },
     ips: normalizeToArray(hitSource.source?.ip),
     countryCodes: normalizeToArray(hitSource.source?.geo?.country_iso_code),
   };

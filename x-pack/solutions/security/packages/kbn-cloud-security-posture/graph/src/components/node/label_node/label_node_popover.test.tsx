@@ -9,13 +9,13 @@ import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { LabelNodePopoverContent } from './label_node_popover';
 import { analyzeDocuments } from './analyze_documents';
-
-const TEST_SUBJ_ALERT_SECTION = 'label-node-tooltip-alert-section';
-const TEST_SUBJ_ALERT_ICON = 'label-node-tooltip-alert-icon';
-const TEST_SUBJ_ALERT_COUNT = 'label-node-tooltip-alert-count';
-
-const TEST_SUBJ_EVENT_SECTION = 'label-node-tooltip-event-section';
-const TEST_SUBJ_EVENT_COUNT = 'label-node-tooltip-event-count';
+import {
+  TEST_SUBJ_ALERT_SECTION,
+  TEST_SUBJ_ALERT_ICON,
+  TEST_SUBJ_ALERT_COUNT,
+  TEST_SUBJ_EVENT_SECTION,
+  TEST_SUBJ_EVENT_COUNT,
+} from '../../test_ids';
 
 describe('LabelNodePopoverContent', () => {
   test('renders nothing with no events or alerts', () => {

@@ -29,9 +29,9 @@ export interface EventOrAlertSpecificFields extends BaseGroupedItemCommonFields 
   /** action becomes the title */
   action?: string; // if missing we fallback to '-')
   /** actor entity descriptor */
-  actor?: { id: string; icon?: string; label?: string };
+  actor?: { id: string | string[]; icon?: string; label?: string };
   /** target entity descriptor */
-  target?: { id: string; icon?: string; label?: string };
+  target?: { id: string | string[]; icon?: string; label?: string };
 }
 
 export interface EntitySpecificFields extends BaseGroupedItemCommonFields {

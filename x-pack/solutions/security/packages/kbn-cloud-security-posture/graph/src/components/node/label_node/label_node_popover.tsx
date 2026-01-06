@@ -13,6 +13,13 @@ import { getAbbreviatedNumber } from '@kbn/cloud-security-posture-common';
 import { useKibanaIsDarkMode } from '@kbn/react-kibana-context-theme';
 import { RoundedBadge } from '../styles';
 import type { DocumentAnalysisOutput } from './analyze_documents';
+import {
+  TEST_SUBJ_ALERT_COUNT,
+  TEST_SUBJ_ALERT_ICON,
+  TEST_SUBJ_ALERT_SECTION,
+  TEST_SUBJ_EVENT_SECTION,
+  TEST_SUBJ_EVENT_COUNT,
+} from '../../test_ids';
 
 const alertedEventsText = i18n.translate(
   'securitySolutionPackages.csp.graph.labelNode.tooltip.alertedEvents',
@@ -84,19 +91,14 @@ const Section: React.FC<{ testSubj: string; badge: React.ReactNode; label: strin
 
 const AlertBadge: React.FC<{ count: number }> = ({ count }) => (
   <RoundedBadge>
-    <EuiIcon
-      type="warningFilled"
-      color="danger"
-      size="s"
-      data-test-subj="label-node-tooltip-alert-icon"
-    />
-    <CountText testSubj="label-node-tooltip-alert-count">{getAbbreviatedNumber(count)}</CountText>
+    <EuiIcon type="warningFilled" color="danger" size="s" data-test-subj={TEST_SUBJ_ALERT_ICON} />
+    <CountText testSubj={TEST_SUBJ_ALERT_COUNT}>{getAbbreviatedNumber(count)}</CountText>
   </RoundedBadge>
 );
 
 const EventBadge: React.FC<{ count: number }> = ({ count }) => (
   <RoundedBadge>
-    <CountText testSubj="label-node-tooltip-event-count">{getAbbreviatedNumber(count)}</CountText>
+    <CountText testSubj={TEST_SUBJ_EVENT_COUNT}>{getAbbreviatedNumber(count)}</CountText>
   </RoundedBadge>
 );
 
@@ -112,14 +114,14 @@ export const LabelNodePopoverContent = ({ analysis }: LabelNodePopoverProps) => 
     >
       {analysis.uniqueAlertsCount > 0 && (
         <Section
-          testSubj="label-node-tooltip-alert-section"
+          testSubj={TEST_SUBJ_ALERT_SECTION}
           badge={<AlertBadge count={analysis.uniqueAlertsCount} />}
           label={alertedEventsText}
         />
       )}
       {analysis.uniqueEventsCount > 0 && (
         <Section
-          testSubj="label-node-tooltip-event-section"
+          testSubj={TEST_SUBJ_EVENT_SECTION}
           badge={<EventBadge count={analysis.uniqueEventsCount} />}
           label={defaultEventsText}
         />

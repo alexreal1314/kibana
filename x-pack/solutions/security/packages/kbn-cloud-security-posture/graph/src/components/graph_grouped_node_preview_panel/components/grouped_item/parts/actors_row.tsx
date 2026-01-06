@@ -22,33 +22,41 @@ const badgeStyles = css`
 `;
 
 export const ActorsRow = ({ actor, target }: ActorsRowProps) => {
+  // Normalize actor and target IDs to arrays
+  const actorIds = Array.isArray(actor.id) ? actor.id : [actor.id];
+  const targetIds = Array.isArray(target.id) ? target.id : [target.id];
+
   return (
     <EuiFlexGroup wrap gutterSize="xs" responsive={false} alignItems="center" direction="row">
-      <EuiFlexItem grow={false}>
-        <EuiBadge
-          color="hollow"
-          iconType={actor.icon}
-          iconSide="left"
-          data-test-subj={GROUPED_ITEM_ACTOR_TEST_ID}
-          css={badgeStyles}
-        >
-          {displayEntityName(actor)}
-        </EuiBadge>
-      </EuiFlexItem>
+      {actorIds.map((actorId) => (
+        <EuiFlexItem key={`actor-${actorId}`} grow={false}>
+          <EuiBadge
+            color="hollow"
+            iconType={actor.icon}
+            iconSide="left"
+            data-test-subj={GROUPED_ITEM_ACTOR_TEST_ID}
+            css={badgeStyles}
+          >
+            {displayEntityName({ ...actor, id: actorId })}
+          </EuiBadge>
+        </EuiFlexItem>
+      ))}
       <EuiFlexItem grow={false}>
         <EuiIcon type="sortRight" size="m" color="subdued" />
       </EuiFlexItem>
-      <EuiFlexItem grow={false}>
-        <EuiBadge
-          color="hollow"
-          iconType={target.icon}
-          iconSide="left"
-          data-test-subj={GROUPED_ITEM_TARGET_TEST_ID}
-          css={badgeStyles}
-        >
-          {displayEntityName(target)}
-        </EuiBadge>
-      </EuiFlexItem>
+      {targetIds.map((targetId) => (
+        <EuiFlexItem key={`target-${targetId}`} grow={false}>
+          <EuiBadge
+            color="hollow"
+            iconType={target.icon}
+            iconSide="left"
+            data-test-subj={GROUPED_ITEM_TARGET_TEST_ID}
+            css={badgeStyles}
+          >
+            {displayEntityName({ ...target, id: targetId })}
+          </EuiBadge>
+        </EuiFlexItem>
+      ))}
     </EuiFlexGroup>
   );
 };

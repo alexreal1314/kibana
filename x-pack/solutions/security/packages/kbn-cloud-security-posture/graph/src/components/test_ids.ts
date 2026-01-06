@@ -104,3 +104,9 @@ export const GRAPH_POPOVER_PREVIEW_PANEL =
 
 export const GRAPH_CALLOUT_TEST_ID = `${GRAPH_INVESTIGATION_TEST_ID}Callout` as const;
 export const GRAPH_CALLOUT_LINK_TEST_ID = `${GRAPH_INVESTIGATION_TEST_ID}CalloutLink` as const;
+export const TEST_SUBJ_ALERT_SECTION = 'label-node-popover-alert-section' as const;
+export const TEST_SUBJ_ALERT_ICON = 'label-node-popover-alert-icon' as const;
+export const TEST_SUBJ_ALERT_COUNT = 'label-node-popover-alert-count' as const;
+
+export const TEST_SUBJ_EVENT_SECTION = 'label-node-popover-event-section' as const;
+export const TEST_SUBJ_EVENT_COUNT = 'label-node-popover-event-count' as const;
