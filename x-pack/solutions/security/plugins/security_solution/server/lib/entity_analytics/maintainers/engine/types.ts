@@ -282,4 +282,16 @@ export interface EntityRelationshipRecord {
    * e.g. { communicates_with: ['host:D3F5C9B9-...', 'user:bob@corp'] }
    */
   relationships: Record<string, string[]>;
+  /**
+   * Raw identifier values that were successfully resolved this run, keyed by
+   * relationship type and identifier field. Written to
+   * entity.relationships.<rel>.resolved_identifiers.<field> alongside ids so
+   * subsequent runs can use MV_DIFFERENCE to skip already-resolved entries.
+   *
+   * Only populated by override configs that emit a resolvedHostnames column
+   * (or equivalent). Standard/bucketed configs leave this undefined.
+   *
+   * Shape mirrors raw_identifiers: { administers: { 'host.name': ['fqdn1', ...] } }
+   */
+  resolvedIdentifiers?: Record<string, Record<string, Record<string, string[]>>>;
 }

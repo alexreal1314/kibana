@@ -5,7 +5,7 @@
  * 2.0.
  */
 
-import { ADMINISTERS_INTEGRATION_RELATIONSHIP_CONFIGS, buildAdministersConfigs } from './configs';
+import { ADMINISTERS_INTEGRATION_RELATIONSHIP_CONFIGS } from './configs';
 import { buildActorDiscoveryQuery } from '../engine/build_actor_discovery_query';
 import { buildTargetsPerActorQuery } from '../engine/build_targets_per_actor_query';
 import { COMPOSITE_PAGE_SIZE } from '../engine/constants';
@@ -67,7 +67,7 @@ describe('ADMINISTERS_INTEGRATION_RELATIONSHIP_CONFIGS', () => {
     '$id: override query constructs host EUIDs from FQDN via CONCAT',
     (config) => {
       const query = buildTargetsPerActorQuery(config, 'default');
-      expect(query).toContain('CONCAT("host:", rawHostnames)');
+      expect(query).toContain('CONCAT("host:", allHostnames)');
     }
   );
 
@@ -96,31 +96,32 @@ describe('ADMINISTERS_INTEGRATION_RELATIONSHIP_CONFIGS', () => {
     }
   );
 
-  describe('watermark behaviour', () => {
-    it('with no watermark: query does NOT contain a @timestamp filter', () => {
-      const config = buildAdministersConfigs()[0] as OverrideRelationshipIntegrationConfig;
+  describe('resolved_identifiers approach', () => {
+    it('override query uses MV_DIFFERENCE to filter only unresolved identifiers', () => {
+      const config =
+        ADMINISTERS_INTEGRATION_RELATIONSHIP_CONFIGS[0] as OverrideRelationshipIntegrationConfig;
+      const query = config.esqlQueryOverride('default');
+      expect(query).toContain('MV_DIFFERENCE(');
+      expect(query).toContain('resolved_identifiers.host.name');
+    });
+
+    it('override query resolvedHostnames tracks full raw_identifiers set (not just delta)', () => {
+      const config =
+        ADMINISTERS_INTEGRATION_RELATIONSHIP_CONFIGS[0] as OverrideRelationshipIntegrationConfig;
+      const query = config.esqlQueryOverride('default');
+      expect(query).toContain('MV_EXPAND allHostnames');
+      expect(query).toContain('resolvedHostnames = VALUES(allHostnames)');
+    });
+
+    it('override query does NOT contain a @timestamp filter (no watermark needed)', () => {
+      const config =
+        ADMINISTERS_INTEGRATION_RELATIONSHIP_CONFIGS[0] as OverrideRelationshipIntegrationConfig;
       const query = config.esqlQueryOverride('default');
       expect(query).not.toContain('@timestamp >');
     });
 
-    it('with watermark: query contains a @timestamp filter after the watermark value', () => {
-      const ts = '2026-06-01T00:00:00.000Z';
-      const config = buildAdministersConfigs(ts)[0] as OverrideRelationshipIntegrationConfig;
-      const query = config.esqlQueryOverride('default');
-      expect(query).toContain(`@timestamp > "${ts}"`);
-    });
-
-    it('with watermark: composite agg filters include @timestamp range', () => {
-      const ts = '2026-06-01T00:00:00.000Z';
-      const config = buildAdministersConfigs(ts)[0];
-      const filters = config.compositeAggAdditionalFilters ?? [];
-      const rangeFilters = filters.filter((f) => JSON.stringify(f).includes('@timestamp'));
-      expect(rangeFilters.length).toBe(1);
-      expect(JSON.stringify(rangeFilters[0])).toContain(ts);
-    });
-
-    it('with no watermark: composite agg filters do NOT include @timestamp range', () => {
-      const config = buildAdministersConfigs()[0];
+    it('composite agg filters do NOT include @timestamp range', () => {
+      const config = ADMINISTERS_INTEGRATION_RELATIONSHIP_CONFIGS[0];
       const filters = config.compositeAggAdditionalFilters ?? [];
       const rangeFilters = filters.filter((f) => JSON.stringify(f).includes('@timestamp'));
       expect(rangeFilters.length).toBe(0);
@@ -129,17 +130,10 @@ describe('ADMINISTERS_INTEGRATION_RELATIONSHIP_CONFIGS', () => {
 
   describe('golden snapshots', () => {
     it.each(ADMINISTERS_INTEGRATION_RELATIONSHIP_CONFIGS)(
-      '$id: targets-per-actor ES|QL is locked (no watermark)',
+      '$id: targets-per-actor ES|QL is locked',
       (config) => {
         expect(buildTargetsPerActorQuery(config, '__namespace__')).toMatchSnapshot();
       }
     );
-
-    it('entityanalytics_ad: targets-per-actor ES|QL with watermark is locked', () => {
-      const config = buildAdministersConfigs(
-        '2026-06-01T00:00:00.000Z'
-      )[0] as OverrideRelationshipIntegrationConfig;
-      expect(config.esqlQueryOverride('__namespace__')).toMatchSnapshot();
-    });
   });
 });

@@ -108,12 +108,18 @@ export const parseTargetsPerActorRows = (
     }
 
     const flatCol = ENGINE_COLUMNS.flat(config.relationshipKey);
+    const resolvedHostnames = toStringArray(record['resolvedHostnames']);
     return {
       entityId: actorUserId,
       entityType: 'user' as const,
       relationships: {
         [config.relationshipKey]: toStringArray(record[flatCol]),
       },
+      ...(resolvedHostnames.length > 0 && {
+        resolvedIdentifiers: {
+          [config.relationshipKey]: { host: { name: resolvedHostnames } },
+        },
+      }),
     };
   });
 };

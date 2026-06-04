@@ -91,12 +91,37 @@ export const writeEntityIds = async (
 
   const objects: BulkObject[] = [];
   for (const [entityId, mergedRels] of merged) {
-    const relationships: Record<string, { ids: string[] }> = {};
+    const relationships: Record<string, { ids: string[]; resolved_identifiers?: Record<string, Record<string, string[]>> }> = {};
     for (const [relType, idSet] of Object.entries(mergedRels)) {
       if (idSet.size > 0) {
         relationships[relType] = { ids: Array.from(idSet) };
       }
     }
+
+    // Write resolved_identifiers atomically alongside ids in the same update.
+    // Shape mirrors the nested mapping: { host: { name: [...] } }
+    for (const record of valid.filter((r) => r.entityId === entityId)) {
+      if (!record.resolvedIdentifiers) continue;
+      for (const [relType, nestedMap] of Object.entries(record.resolvedIdentifiers)) {
+        if (!relationships[relType]) relationships[relType] = { ids: [] };
+        if (!relationships[relType].resolved_identifiers) {
+          relationships[relType].resolved_identifiers = {};
+        }
+        for (const [parentKey, childMap] of Object.entries(nestedMap)) {
+          if (!relationships[relType].resolved_identifiers![parentKey]) {
+            relationships[relType].resolved_identifiers![parentKey] = {};
+          }
+          for (const [childKey, values] of Object.entries(childMap as Record<string, string[]>)) {
+            const existing =
+              (relationships[relType].resolved_identifiers![parentKey] as Record<string, string[]>)[childKey] ?? [];
+            (relationships[relType].resolved_identifiers![parentKey] as Record<string, string[]>)[childKey] = [
+              ...new Set([...existing, ...values]),
+            ];
+          }
+        }
+      }
+    }
+
     if (Object.keys(relationships).length > 0) {
       objects.push({
         type: entityTypeFromEuid(entityId),

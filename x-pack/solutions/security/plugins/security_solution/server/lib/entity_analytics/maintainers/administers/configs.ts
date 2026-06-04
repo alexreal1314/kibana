@@ -12,51 +12,44 @@ import type { RelationshipIntegrationConfig } from '../engine/types';
 /**
  * Builds the Step 2 ES|QL override query for the administers maintainer.
  *
- * Assumption (this iteration): raw_identifiers.host.name contains the FQDN
- * (e.g. "workstation-01.corp.com"), allowing inline EUID construction as
- * CONCAT("host:", fqdn). No cross-entity lookup is required.
+ * Uses MV_DIFFERENCE to compute the delta between raw_identifiers and
+ * resolved_identifiers so only genuinely unresolved hostnames are processed.
+ * Entities where all raw_identifiers are already resolved are excluded entirely
+ * at the ES|QL level — no application-side diff needed.
  *
- * Both user and host entities can be actors (AD managedObjects applies to both).
- * The query does not filter by entity.type so both are processed in one pass.
- * actorUserId is set to entity.id which already carries the full type-prefixed
- * EUID (e.g. "user:alice@corp.com" or "host:workstation-01.corp.com").
- *
- * Override column contract (required by parseTargetsPerActorRows):
- *   - actorUserId  — full actor EUID string
- *   - administers  — array of resolved target EUIDs
- *
- * Future iteration: when raw_identifiers.host.name contains only the bare CN
- * (e.g. "WORKSTATION-01"), replace the inline CONCAT with a LOOKUP JOIN against
- * host.hostname in the entity index.
+ * Override column contract:
+ *   - actorUserId       — full actor EUID string
+ *   - administers       — resolved target EUIDs to write into ids
+ *   - resolvedHostnames — raw hostname values that were resolved, to append
+ *                         into resolved_identifiers.host.name
  */
-function buildAdministersEsqlQuery(namespace: string, lastProcessedTimestamp?: string): string {
+function buildAdministersEsqlQuery(namespace: string): string {
   const entityIndex = getLatestEntityIndexPattern(namespace);
-  const watermarkClause = lastProcessedTimestamp
-    ? `\n    AND @timestamp > "${lastProcessedTimestamp}"`
-    : '';
 
   return `FROM ${entityIndex}
-| WHERE entity.relationships.administers.raw_identifiers.host.name IS NOT NULL${watermarkClause}
+| WHERE MV_DIFFERENCE(
+    entity.relationships.administers.raw_identifiers.host.name,
+    entity.relationships.administers.resolved_identifiers.host.name
+  ) IS NOT NULL
 | EVAL actorUserId = entity.id
-| EVAL rawHostnames = entity.relationships.administers.raw_identifiers.host.name
-| MV_EXPAND rawHostnames
-| WHERE COALESCE(rawHostnames, "") != ""
-| EVAL targetEntityId = CONCAT("host:", rawHostnames)
-| STATS administers = VALUES(targetEntityId) BY actorUserId
+| EVAL allHostnames = entity.relationships.administers.raw_identifiers.host.name
+| MV_EXPAND allHostnames
+| WHERE COALESCE(allHostnames, "") != ""
+| EVAL targetEntityId = CONCAT("host:", allHostnames)
+| STATS
+    administers       = VALUES(targetEntityId),
+    resolvedHostnames = VALUES(allHostnames)
+  BY actorUserId
 | WHERE COALESCE(actorUserId, "") != ""
 | LIMIT ${COMPOSITE_PAGE_SIZE}`;
 }
 
-export function buildAdministersConfigs(
-  lastProcessedTimestamp?: string
-): RelationshipIntegrationConfig[] {
+export function buildAdministersConfigs(): RelationshipIntegrationConfig[] {
   return [
     {
       kind: 'override',
       id: 'entityanalytics_ad',
       name: 'Active Directory Entity Analytics',
-      // Step 1 (composite agg actor discovery) queries the entity index.
-      // Actors are entity documents (users or hosts), not raw log events.
       indexPattern: getLatestEntityIndexPattern,
       targetEntityType: 'host',
       relationshipKey: 'administers',
@@ -68,22 +61,16 @@ export function buildAdministersConfigs(
         fields: ['entity.id'],
       },
       compositeAggAdditionalFilters: [
-        // Step 1: narrow to entities that actually have administers raw_identifiers.
+        // Only surface entities that have unresolved administers raw_identifiers.
         {
           exists: {
             field: 'entity.relationships.administers.raw_identifiers.host.name',
           },
         },
-        // When a watermark exists, Step 1 also filters by @timestamp so it
-        // surfaces only actors that changed since the last run.
-        ...(lastProcessedTimestamp
-          ? [{ range: { '@timestamp': { gt: lastProcessedTimestamp } } }]
-          : []),
       ],
-      esqlQueryOverride: (ns) => buildAdministersEsqlQuery(ns, lastProcessedTimestamp),
+      esqlQueryOverride: buildAdministersEsqlQuery,
     },
   ];
 }
 
-// Static export for tests that don't need a watermark.
 export const ADMINISTERS_INTEGRATION_RELATIONSHIP_CONFIGS = buildAdministersConfigs();
