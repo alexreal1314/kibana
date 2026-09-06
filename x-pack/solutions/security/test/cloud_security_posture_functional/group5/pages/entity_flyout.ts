@@ -441,7 +441,7 @@ export default function ({ getPageObjects, getService }: SecurityTelemetryFtrPro
           await expandedFlyoutGraph.assertNodeExists(ALICE);
           await expandedFlyoutGraph.assertNodeExists(HOST);
           await expandedFlyoutGraph.assertNodeExists(
-            'label(user.account.update_profile)ln(euid-okta-doc-a)oe(0)oa(0)'
+            'label(device.user.add)ln(euid-okta-doc-a)oe(0)oa(0)'
           );
 
           // Pivoting on the host pulls in every event that targeted it, which reaches the two docs
@@ -463,10 +463,10 @@ export default function ({ getPageObjects, getService }: SecurityTelemetryFtrPro
 
           // doc B is reachable from the host even though alice's own actions filter missed it.
           await expandedFlyoutGraph.assertNodeExists(
-            'label(user.session.start)ln(euid-okta-doc-b)oe(0)oa(0)'
+            'label(user.lifecycle.activate)ln(euid-okta-doc-b)oe(0)oa(0)'
           );
           await expandedFlyoutGraph.assertNodeExists(
-            'label(user.account.update_profile)ln(euid-okta-doc-c)oe(0)oa(0)'
+            'label(device.user.add)ln(euid-okta-doc-c)oe(0)oa(0)'
           );
         });
       });

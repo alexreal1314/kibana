@@ -20,7 +20,15 @@ import type {
   PhrasesFilter,
 } from '@kbn/es-query/src/filters/build_filters';
 import { omit } from 'lodash';
-import { getEuidNamespaceSourcePrefix } from '@kbn/entity-store/common/domain/euid';
+import {
+  getEuidDslFilterBasedOnDocument,
+  getEuidNamespaceSourceFields,
+  getEuidNamespaceSourcePrefix,
+} from '@kbn/entity-store/common/domain/euid';
+import {
+  getEntityFilterSpec,
+  type EuidFilterApi,
+} from '../popovers/node_expand/get_entity_expand_items';
 import {
   CONTROLLED_BY_GRAPH_INVESTIGATION_FILTER,
   addFilter,
@@ -34,6 +42,13 @@ import {
 } from './search_filters';
 
 const dataViewId = 'test-data-view';
+
+// The real Entity Store EUID logic, so filters below are built from the actual definitions.
+const euidApi: EuidFilterApi = {
+  dsl: { getEuidFilterBasedOnDocument: getEuidDslFilterBasedOnDocument },
+  getEuidNamespaceSourceFields,
+  getNamespaceSourcePrefix: getEuidNamespaceSourcePrefix,
+};
 
 const buildFilterMock = (key: string, value: string, controlledBy?: string) => ({
   meta: {
@@ -1034,6 +1049,92 @@ describe('search_filters', () => {
         expect(JSON.stringify(withObserved)).toContain('entityanalytics_okta.user');
         expect(JSON.stringify(withoutObserved)).not.toContain('data_stream.dataset');
       });
+    });
+  });
+
+  describe('host entity filters', () => {
+    // Host has its own euidRanking (host.id outranks host.name), so its guards come from a
+    // different definition than the `user` cases above. Driving the real builder rather than a
+    // hand-written DSL fixture means these fail if `host.ts` changes.
+    const getHostNamespacePrefix = (field: string, observedValue: string) =>
+      getEuidNamespaceSourcePrefix('host', field, observedValue);
+
+    const buildHostFilter = (
+      sourceFields: Record<string, string | string[]>,
+      role: 'actor' | 'target'
+    ) => {
+      const spec = getEntityFilterSpec('host:h1', sourceFields, euidApi, role);
+      if (!spec || spec.kind !== 'dsl') throw new Error('expected a dsl spec');
+      return buildEntityDslFilter(
+        'host:h1',
+        spec.dsl,
+        dataViewId,
+        spec.namespaceSourceValues,
+        getHostNamespacePrefix
+      );
+    };
+
+    it('renders a single phrase chip when the top-ranked host.id is present', () => {
+      const filter = buildHostFilter(
+        { 'host.id': 'HW-1', 'host.name': 'web-1', 'data_stream.dataset': 'gcp.audit' },
+        'actor'
+      );
+
+      // host.id wins outright, so there is nothing to guard and no combined wrapper.
+      expect(filter).toMatchObject({
+        meta: { type: 'phrase', key: 'host.id', negate: false },
+        query: { match_phrase: { 'host.id': 'HW-1' } },
+      });
+    });
+
+    it('guards the higher-ranked host.id when the entity resolved via host.name', () => {
+      const filter = buildHostFilter(
+        { 'host.name': 'web-1', 'data_stream.dataset': 'gcp.audit' },
+        'actor'
+      );
+      const parts = filter?.meta.params as Filter[];
+
+      expect(filter?.meta).toMatchObject({
+        type: FILTERS.COMBINED,
+        relation: BooleanRelation.AND,
+      });
+      expect(parts[0]).toMatchObject({
+        meta: { type: 'phrase', key: 'host.name' },
+        query: { match_phrase: { 'host.name': 'web-1' } },
+      });
+      // Without this guard the filter would also match hosts that have a host.id, which resolve
+      // to a different entity.
+      expect(parts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            meta: expect.objectContaining({ type: 'exists', key: 'host.id', negate: true }),
+          }),
+        ])
+      );
+    });
+
+    it('rewrites host identity fields to the target namespace for the target role', () => {
+      const filter = buildHostFilter(
+        { 'host.name': 'web-1', 'data_stream.dataset': 'gcp.audit' },
+        'target'
+      );
+      const serialized = JSON.stringify(filter);
+
+      expect(serialized).toContain('host.target.name');
+      expect(serialized).toContain('host.target.id');
+      expect(serialized).not.toContain('"host.name"');
+    });
+
+    it('emits no namespace clause, because host identity does not compose one', () => {
+      const filter = buildHostFilter(
+        { 'host.id': 'HW-1', 'data_stream.dataset': 'gcp.audit' },
+        'actor'
+      );
+
+      // Unlike `user`, the host EUID carries no entity.namespace, so a host filter is not scoped
+      // to the integration the event came from.
+      expect(JSON.stringify(filter)).not.toContain('data_stream.dataset');
+      expect(JSON.stringify(filter)).not.toContain('event.module');
     });
   });
 });

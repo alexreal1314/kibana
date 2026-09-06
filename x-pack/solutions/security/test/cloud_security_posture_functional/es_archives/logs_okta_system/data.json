@@ -15,7 +15,7 @@
         "version": "8.11.0"
       },
       "event": {
-        "action": "user.account.update_profile",
+        "action": "device.user.add",
         "agent_id_status": "verified",
         "category": [
           "iam"
@@ -26,9 +26,10 @@
         "kind": "event",
         "outcome": "success",
         "type": [
-          "user",
-          "change"
-        ]
+          "creation",
+          "user"
+        ],
+        "reason": "Add device to user"
       },
       "host": {
         "target": {
@@ -46,12 +47,14 @@
         "outcome": {
           "result": "SUCCESS"
         },
-        "target": {
-          "alternate_id": "okta-demo-host-1",
-          "display_name": "Okta Demo Host 1",
-          "id": "okta-demo-host-1",
-          "type": "Device"
-        },
+        "target": [
+          {
+            "alternate_id": "unknown",
+            "display_name": "Okta Demo Host 1",
+            "id": "okta-demo-host-1",
+            "type": "UDDevice"
+          }
+        ],
         "uuid": "aaaaaaaa-0000-0000-0000-00000000000a"
       },
       "related": {
@@ -95,7 +98,7 @@
         "version": "8.11.0"
       },
       "event": {
-        "action": "user.session.start",
+        "action": "user.lifecycle.activate",
         "agent_id_status": "verified",
         "category": [
           "iam"
@@ -106,9 +109,9 @@
         "kind": "event",
         "outcome": "success",
         "type": [
-          "user",
-          "change"
-        ]
+          "user"
+        ],
+        "reason": "Activate Okta user"
       },
       "host": {
         "target": {
@@ -125,12 +128,14 @@
         "outcome": {
           "result": "SUCCESS"
         },
-        "target": {
-          "alternate_id": "okta-demo-host-1",
-          "display_name": "Okta Demo Host 1",
-          "id": "okta-demo-host-1",
-          "type": "Device"
-        },
+        "target": [
+          {
+            "alternate_id": "unknown",
+            "display_name": "Okta Demo Host 1",
+            "id": "okta-demo-host-1",
+            "type": "UDDevice"
+          }
+        ],
         "uuid": "bbbbbbbb-0000-0000-0000-00000000000b"
       },
       "related": {
@@ -172,7 +177,7 @@
         "version": "8.11.0"
       },
       "event": {
-        "action": "user.account.update_profile",
+        "action": "device.user.add",
         "agent_id_status": "verified",
         "category": [
           "iam"
@@ -183,9 +188,10 @@
         "kind": "event",
         "outcome": "success",
         "type": [
-          "user",
-          "change"
-        ]
+          "creation",
+          "user"
+        ],
+        "reason": "Add device to user"
       },
       "host": {
         "target": {
@@ -203,12 +209,14 @@
         "outcome": {
           "result": "SUCCESS"
         },
-        "target": {
-          "alternate_id": "okta-demo-host-1",
-          "display_name": "Okta Demo Host 1",
-          "id": "okta-demo-host-1",
-          "type": "Device"
-        },
+        "target": [
+          {
+            "alternate_id": "unknown",
+            "display_name": "Okta Demo Host 1",
+            "id": "okta-demo-host-1",
+            "type": "UDDevice"
+          }
+        ],
         "uuid": "cccccccc-0000-0000-0000-00000000000c"
       },
       "related": {
