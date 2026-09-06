@@ -32,7 +32,7 @@ export interface NamespaceSourceFields {
    * before a delimiter (e.g. `data_stream.dataset` split on `.` gives `gcp` from `gcp.audit`).
    * Declared as `{ firstChunkOfField: '...', splitBy: '.' }` in `fieldEvaluations[].sources`.
    * When building Kibana filters, replace prefix clauses on these fields with exact phrase filters
-   * using the raw observed values from the document.
+   * using the raw observed values from the document — see {@link getEuidNamespaceSourcePrefix}.
    */
   prefixMatchFields: string[];
 }
@@ -98,4 +98,47 @@ export function getEuidNamespaceSourceFields(entityType: EntityType): NamespaceS
   }
   const allSources = (identityField.fieldEvaluations ?? []).flatMap((fe) => fe.sources);
   return getSourceFieldNames(allSources);
+}
+
+/**
+ * Reduces a raw observed field value to the prefix a prefix-matched namespace source would derive
+ * from it, or `undefined` when the field is not such a source for this entity type.
+ *
+ * A `firstChunkOfField` source keeps only the part before its delimiter, so
+ * `data_stream.dataset: "okta.system"` derives the namespace prefix `okta`. The DSL builder reverses
+ * that into a prefix query (`data_stream.dataset: okta*`), and callers replacing such a clause with
+ * an exact phrase filter need to know which arm an observed value belongs to — an entity type can
+ * emit several arms for one field (the `user` definition accepts both `okta` and
+ * `entityanalytics_okta`).
+ *
+ * Comparing this result to an arm's prefix is **not** the same as testing `value.startsWith(prefix)`:
+ * `okta_legacy.system` reduces to `okta_legacy`, so it does not belong to the `okta` arm even though
+ * its string starts with it. Use this rather than reimplementing the split, since only the entity
+ * definition knows each source's `splitBy` delimiter.
+ *
+ * @param entityType - The entity type whose definition declares the source
+ * @param field - The candidate namespace source field (e.g. `data_stream.dataset`)
+ * @param observedValue - The raw value the document carried (e.g. `okta.system`)
+ * @returns the derived prefix (e.g. `okta`), or `undefined` if `field` is not a prefix-matched
+ *   source for this entity type
+ */
+export function getEuidNamespaceSourcePrefix(
+  entityType: EntityType,
+  field: string,
+  observedValue: string
+): string | undefined {
+  const { identityField } = getEntityDefinitionWithoutId(entityType);
+  if (isSingleFieldIdentity(identityField)) {
+    return undefined;
+  }
+
+  for (const evaluation of identityField.fieldEvaluations ?? []) {
+    for (const source of evaluation.sources) {
+      if ('firstChunkOfField' in source && source.firstChunkOfField === field) {
+        return observedValue.split(source.splitBy)[0];
+      }
+    }
+  }
+
+  return undefined;
 }

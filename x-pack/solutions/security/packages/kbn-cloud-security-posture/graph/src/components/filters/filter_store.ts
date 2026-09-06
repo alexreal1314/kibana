@@ -15,6 +15,7 @@ import {
   removeEntityFilter,
   containsEntityFilter,
 } from './search_filters';
+import type { NamespaceSourcePrefixResolver } from './search_filters';
 
 // =============================================================================
 // Filter Toggle Event Bus
@@ -58,6 +59,11 @@ export interface EntityFilterToggleEvent {
    * exact phrase filters so every filter uses a standard UI operator.
    */
   namespaceSourceValues?: Record<string, string | string[]>;
+  /**
+   * Reduces an observed namespace value to its derived prefix. Comes from the Entity Store so the
+   * translation never reimplements its chunking rules.
+   */
+  getNamespaceSourcePrefix?: NamespaceSourcePrefixResolver;
   action: 'show' | 'hide';
 }
 
@@ -151,7 +157,8 @@ export const emitEntityFilterToggle = (
   entityId: string,
   dsl: object,
   action: 'show' | 'hide',
-  namespaceSourceValues?: Record<string, string | string[]>
+  namespaceSourceValues?: Record<string, string | string[]>,
+  getNamespaceSourcePrefix?: NamespaceSourcePrefixResolver
 ): void => {
   const event: EntityFilterToggleEvent = {
     type: 'entityDsl',
@@ -159,6 +166,7 @@ export const emitEntityFilterToggle = (
     entityId,
     dsl,
     namespaceSourceValues,
+    getNamespaceSourcePrefix,
     action,
   };
   filterToggleEvents$.next(event);
@@ -299,7 +307,8 @@ export class FilterStore {
             event.entityId,
             event.dsl,
             event.action,
-            event.namespaceSourceValues
+            event.namespaceSourceValues,
+            event.getNamespaceSourcePrefix
           );
           return;
         }
@@ -383,7 +392,8 @@ export class FilterStore {
     entityId: string,
     dsl: object,
     action: 'show' | 'hide',
-    namespaceSourceValues?: Record<string, string | string[]>
+    namespaceSourceValues?: Record<string, string | string[]>,
+    getNamespaceSourcePrefix?: NamespaceSourcePrefixResolver
   ): void {
     const next =
       action === 'show'
@@ -392,7 +402,8 @@ export class FilterStore {
             this.filters$.value,
             entityId,
             dsl,
-            namespaceSourceValues
+            namespaceSourceValues,
+            getNamespaceSourcePrefix
           )
         : removeEntityFilter(this.filters$.value, entityId);
     this.filters$.next(next);

@@ -63,6 +63,16 @@ interface EuidDslClause {
   exists?: { field: string };
 }
 
+/**
+ * Reduces an observed namespace source value to the prefix the entity definition derives from it,
+ * or `undefined` when the field is not a prefix-matched source. Supplied by the caller so this
+ * module never reimplements the Entity Store's chunking rules — see `euid.getNamespaceSourcePrefix`.
+ */
+export type NamespaceSourcePrefixResolver = (
+  field: string,
+  observedValue: string
+) => string | undefined;
+
 const buildExistsFilterClause = (field: string, negate: boolean, dataViewId?: string): Filter => ({
   meta: {
     key: field,
@@ -106,7 +116,7 @@ export const buildNamespaceSourceFilters = (
  *
  * `prefix` clauses (produced for `data_stream.dataset` from the Entity Store's `firstChunkOfField`
  * source) cannot be expressed as is/is-one-of/exists. When `namespaceSourceValues` contains a raw
- * observed value the prefix would have matched, an exact phrase filter is emitted instead.
+ * observed value that belongs to the arm, an exact phrase filter is emitted instead.
  *
  * When no observed value is available the arm is dropped. For GCP the sibling `event.module: gcp`
  * arm still carries the namespace, but that is not universal: Okta documents have no `event.module`
@@ -116,8 +126,12 @@ export const buildNamespaceSourceFilters = (
 const euidDslClauseToFilters = (
   clause: EuidDslClause,
   dataViewId?: string,
-  namespaceSourceValues?: Record<string, string | string[]>
+  namespaceSourceValues?: Record<string, string | string[]>,
+  getNamespaceSourcePrefix?: NamespaceSourcePrefixResolver
 ): Filter[] => {
+  const recurse = (sub: EuidDslClause) =>
+    euidDslClauseToFilters(sub, dataViewId, namespaceSourceValues, getNamespaceSourcePrefix);
+
   if (clause.term) {
     const [field, value] = Object.entries(clause.term)[0];
     // The EUID guards use `term: { field: '' }` to mean "present but empty". An empty phrase
@@ -128,13 +142,14 @@ const euidDslClauseToFilters = (
 
   if (clause.prefix) {
     const [field, prefix] = Object.entries(clause.prefix)[0];
-    // Only substitute observed values the prefix would actually have matched. An entity type can
-    // emit several prefix arms for the same field (Okta emits both `okta*` and
-    // `entityanalytics_okta*`), and substituting blindly would let a value satisfy an arm it does
-    // not belong to.
+    // An entity type can emit several prefix arms for one field (the `user` definition accepts
+    // both `okta` and `entityanalytics_okta`), so only values belonging to *this* arm may be
+    // substituted. Which arm a value belongs to is the Entity Store's judgement: it reduces the
+    // value using the source's own `splitBy`, so `okta_legacy.system` yields `okta_legacy` and is
+    // correctly refused by the `okta` arm — a `startsWith` test would have accepted it.
     const matching = ([] as string[])
       .concat(namespaceSourceValues?.[field] ?? [])
-      .filter((value) => value.startsWith(prefix));
+      .filter((value) => getNamespaceSourcePrefix?.(field, value) === prefix);
 
     // No observed value for this arm — drop it (see comment above). Sibling arms in the same
     // `should` still carry the namespace match.
@@ -154,22 +169,18 @@ const euidDslClauseToFilters = (
       .filter((field): field is string => field != null)
       .map((field) => buildExistsFilterClause(field, true, dataViewId));
 
-    const andParts = [...filter, ...must].flatMap((sub) =>
-      euidDslClauseToFilters(sub, dataViewId, namespaceSourceValues)
-    );
+    const andParts = [...filter, ...must].flatMap(recurse);
 
     if (should.length > 0) {
       // Several prefix arms can collapse onto the same observed value, which would render as a
       // duplicated chip in the same OR — key on the resulting query to keep one of each.
       const seen = new Set<string>();
-      const orParts = should
-        .flatMap((sub) => euidDslClauseToFilters(sub, dataViewId, namespaceSourceValues))
-        .filter((part) => {
-          const key = JSON.stringify(part.query ?? part.meta);
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
+      const orParts = should.flatMap(recurse).filter((part) => {
+        const key = JSON.stringify(part.query ?? part.meta);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
 
       const orFilter =
         orParts.length === 1
@@ -201,9 +212,15 @@ export const buildEntityDslFilter = (
   entityId: string,
   dsl: object,
   dataViewId?: string,
-  namespaceSourceValues?: Record<string, string | string[]>
+  namespaceSourceValues?: Record<string, string | string[]>,
+  getNamespaceSourcePrefix?: NamespaceSourcePrefixResolver
 ): Filter | undefined => {
-  const parts = euidDslClauseToFilters(dsl as EuidDslClause, dataViewId, namespaceSourceValues);
+  const parts = euidDslClauseToFilters(
+    dsl as EuidDslClause,
+    dataViewId,
+    namespaceSourceValues,
+    getNamespaceSourcePrefix
+  );
   if (parts.length === 0) return undefined;
 
   const base =
@@ -281,9 +298,16 @@ export const addEntityFilter = (
   prev: Filter[],
   entityId: string,
   dsl: object,
-  namespaceSourceValues?: Record<string, string | string[]>
+  namespaceSourceValues?: Record<string, string | string[]>,
+  getNamespaceSourcePrefix?: NamespaceSourcePrefixResolver
 ): Filter[] => {
-  const built = buildEntityDslFilter(entityId, dsl, dataViewId, namespaceSourceValues);
+  const built = buildEntityDslFilter(
+    entityId,
+    dsl,
+    dataViewId,
+    namespaceSourceValues,
+    getNamespaceSourcePrefix
+  );
   if (!built) return prev;
 
   const [firstFilter, ...otherFilters] = removeEntityFilter(prev, entityId);

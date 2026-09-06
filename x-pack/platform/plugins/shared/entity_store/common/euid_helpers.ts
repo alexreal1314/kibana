@@ -52,6 +52,14 @@ export const euid = {
   getEuidNamespaceSourceFields: euidModule.getEuidNamespaceSourceFields,
 
   /**
+   * Reduces an observed namespace source value to the prefix the entity definition derives from it
+   * (e.g. `data_stream.dataset: "okta.system"` → `okta`), or `undefined` when the field is not a
+   * prefix-matched source. Splits on the source's own `splitBy`, so comparing the result to an arm
+   * is not the same as a `startsWith` test — use this instead of reimplementing the split.
+   */
+  getNamespaceSourcePrefix: euidModule.getEuidNamespaceSourcePrefix,
+
+  /**
    * Painless-backed EUID helpers for runtime fields and scripts (same semantics as `getEuidFromObject`).
    */
   painless: {

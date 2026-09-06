@@ -29,6 +29,7 @@ export {
 export {
   getEuidSourceFields,
   getEuidNamespaceSourceFields,
+  getEuidNamespaceSourcePrefix,
   type IdentitySourceFields,
   type NamespaceSourceFields,
 } from './identity_fields';

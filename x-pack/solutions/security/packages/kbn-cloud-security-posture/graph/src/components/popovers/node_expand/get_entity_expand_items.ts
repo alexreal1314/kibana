@@ -19,6 +19,7 @@ import {
   isFilterActiveForScope,
   isEntityFilterActiveForScope,
 } from '../../filters/filter_store';
+import type { NamespaceSourcePrefixResolver } from '../../filters/search_filters';
 import {
   GRAPH_NODE_POPOVER_SHOW_ACTIONS_BY_ITEM_ID,
   GRAPH_NODE_POPOVER_SHOW_ACTIONS_ON_ITEM_ID,
@@ -86,6 +87,15 @@ export interface EuidFilterApi {
     exactMatchFields: string[];
     prefixMatchFields: string[];
   };
+  /**
+   * Reduces an observed namespace source value to the prefix the entity definition derives from it.
+   * Only the definition knows each source's `splitBy`, so this must not be reimplemented locally.
+   */
+  getNamespaceSourcePrefix: (
+    entityType: EntityType,
+    field: string,
+    observedValue: string
+  ) => string | undefined;
 }
 
 /**
@@ -106,6 +116,8 @@ export type EntityFilterSpec =
       dsl: object;
       /** Raw namespace source field values for replacing prefix clauses with exact phrases. */
       namespaceSourceValues: Record<string, string | string[]>;
+      /** Entity-type-bound resolver reducing an observed value to its derived namespace prefix. */
+      getNamespaceSourcePrefix?: NamespaceSourcePrefixResolver;
     }
   | { kind: 'fields'; fields: Record<string, string | string[]> };
 
@@ -157,7 +169,12 @@ export const getEntityFilterSpec = (
     const namespaceSourceValues = Object.fromEntries(
       Object.entries(sourceFields).filter(([field]) => prefixFields.has(field))
     );
-    return { kind: 'dsl', dsl, namespaceSourceValues };
+    // Bind the entity type so the filter translator can reduce a value to its namespace prefix
+    // without knowing about entity types at all.
+    const getNamespaceSourcePrefix: NamespaceSourcePrefixResolver | undefined = euidApi
+      ? (field, observedValue) => euidApi.getNamespaceSourcePrefix(entityType, field, observedValue)
+      : undefined;
+    return { kind: 'dsl', dsl, namespaceSourceValues, getNamespaceSourcePrefix };
   }
 
   const identityFields = Object.fromEntries(
@@ -233,7 +250,14 @@ export const toggleEntityFilterSpec = (
   action: 'show' | 'hide'
 ): void => {
   if (spec.kind === 'dsl') {
-    emitEntityFilterToggle(scopeId, filterKey, spec.dsl, action, spec.namespaceSourceValues);
+    emitEntityFilterToggle(
+      scopeId,
+      filterKey,
+      spec.dsl,
+      action,
+      spec.namespaceSourceValues,
+      spec.getNamespaceSourcePrefix
+    );
     return;
   }
   for (const [field, value] of Object.entries(spec.fields)) {

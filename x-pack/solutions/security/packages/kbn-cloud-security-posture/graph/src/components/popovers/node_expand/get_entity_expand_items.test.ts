@@ -8,6 +8,7 @@
 import {
   getEuidDslFilterBasedOnDocument,
   getEuidNamespaceSourceFields,
+  getEuidNamespaceSourcePrefix,
 } from '@kbn/entity-store/common/domain/euid';
 import {
   getSourceFieldsFromNode,
@@ -25,6 +26,7 @@ import type { NodeViewModel } from '../../types';
 const euidApi: EuidFilterApi = {
   dsl: { getEuidFilterBasedOnDocument: getEuidDslFilterBasedOnDocument },
   getEuidNamespaceSourceFields,
+  getNamespaceSourcePrefix: getEuidNamespaceSourcePrefix,
 };
 
 describe('getSourceFieldsFromNode', () => {
@@ -293,7 +295,8 @@ describe('getEntityFilterSpec', () => {
     // live builder. Translating it into a filter-bar-compatible operator happens downstream in
     // search_filters; `namespaceSourceValues` carries the raw value needed to do that, and holds
     // only prefix-matched fields — `event.module` is matched exactly and needs no replacement.
-    expect(spec).toEqual({
+    // The bound matcher is a function, so compare the data and assert its presence separately.
+    expect(spec).toMatchObject({
       kind: 'dsl',
       namespaceSourceValues: { 'data_stream.dataset': GCP_NAMESPACE_FIELDS['data_stream.dataset'] },
       dsl: {
@@ -313,6 +316,33 @@ describe('getEntityFilterSpec', () => {
         },
       },
     });
+  });
+
+  it('binds the entity store prefix resolver so the translator never reimplements chunking', () => {
+    const spec = getEntityFilterSpec(
+      'user:alice@example.com@okta',
+      {
+        'user.email': 'alice@example.com',
+        'event.dataset': 'okta.system',
+        'data_stream.dataset': 'okta.system',
+      },
+      euidApi,
+      'actor'
+    );
+    const { getNamespaceSourcePrefix } = spec as {
+      getNamespaceSourcePrefix?: (f: string, v: string) => string | undefined;
+    };
+
+    expect(getNamespaceSourcePrefix).toBeDefined();
+    // Bound to `user`, so it reduces using that definition's `splitBy`. `okta_legacy.system` yields
+    // `okta_legacy`, which is why comparing to the `okta` arm correctly rejects it — a `startsWith`
+    // test would not have.
+    expect(getNamespaceSourcePrefix?.('data_stream.dataset', 'okta.system')).toBe('okta');
+    expect(getNamespaceSourcePrefix?.('data_stream.dataset', 'okta_legacy.system')).toBe(
+      'okta_legacy'
+    );
+    // Not a prefix-matched source for `user`, so no prefix can be derived.
+    expect(getNamespaceSourcePrefix?.('event.module', 'okta')).toBeUndefined();
   });
 
   it('takes namespaceSourceValues from the entity store prefix-matched fields, not a hardcoded list', () => {
@@ -382,7 +412,7 @@ describe('getEntityFilterSpec', () => {
   it('builds DSL for host, service and generic entities', () => {
     expect(
       getEntityFilterSpec('host:h1', { 'host.id': 'HW-1', 'host.name': 'web-1' }, euidApi, 'actor')
-    ).toEqual({
+    ).toMatchObject({
       kind: 'dsl',
       namespaceSourceValues: {},
       dsl: { bool: { filter: [{ term: { 'host.id': 'HW-1' } }] } },
@@ -390,7 +420,7 @@ describe('getEntityFilterSpec', () => {
 
     expect(
       getEntityFilterSpec('service:svc-1', { 'service.name': 'svc-1' }, euidApi, 'actor')
-    ).toEqual({
+    ).toMatchObject({
       kind: 'dsl',
       namespaceSourceValues: {},
       dsl: { bool: { filter: [{ term: { 'service.name': 'svc-1' } }] } },
@@ -403,7 +433,7 @@ describe('getEntityFilterSpec', () => {
         euidApi,
         'actor'
       )
-    ).toEqual({
+    ).toMatchObject({
       kind: 'dsl',
       namespaceSourceValues: {},
       dsl: { bool: { filter: [{ term: { 'entity.id': 'projects/p/buckets/b1' } }] } },

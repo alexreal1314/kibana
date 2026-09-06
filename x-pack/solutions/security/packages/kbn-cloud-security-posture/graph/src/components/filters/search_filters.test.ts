@@ -20,6 +20,7 @@ import type {
   PhrasesFilter,
 } from '@kbn/es-query/src/filters/build_filters';
 import { omit } from 'lodash';
+import { getEuidNamespaceSourcePrefix } from '@kbn/entity-store/common/domain/euid';
 import {
   CONTROLLED_BY_GRAPH_INVESTIGATION_FILTER,
   addFilter,
@@ -674,6 +675,12 @@ describe('search_filters', () => {
   });
 
   describe('buildEntityDslFilter with namespace source values', () => {
+    // The real Entity Store resolver, bound to `user` — both DSL fixtures below are user
+    // entities. Using it rather than a stub means these tests fail if the definition's
+    // namespace sources or their `splitBy` change.
+    const getUserNamespacePrefix = (field: string, observedValue: string) =>
+      getEuidNamespaceSourcePrefix('user', field, observedValue);
+
     // The shape the Entity Store's `getEuidDslFilterBasedOnDocument` really returns for a GCP
     // user resolved at ranking position 1 (user.id, no user.email). The `prefix` clause is part
     // of that contract — `data_stream.dataset` is a `firstChunkOfField` source, so the builder
@@ -703,9 +710,15 @@ describe('search_filters', () => {
     const andParams = (filter: Filter | undefined): Filter[] => filter?.meta.params as Filter[];
 
     it('wraps the whole expression in an AND owned by the entity id', () => {
-      const filter = buildEntityDslFilter(entityId, GCP_DSL, dataViewId, {
-        'data_stream.dataset': 'gcp.audit',
-      });
+      const filter = buildEntityDslFilter(
+        entityId,
+        GCP_DSL,
+        dataViewId,
+        {
+          'data_stream.dataset': 'gcp.audit',
+        },
+        getUserNamespacePrefix
+      );
 
       expect(filter?.meta).toMatchObject({
         type: FILTERS.COMBINED,
@@ -820,9 +833,15 @@ describe('search_filters', () => {
     });
 
     it('renders the identity clause as a phrase filter and the guard as a negated exists', () => {
-      const filter = buildEntityDslFilter(entityId, GCP_DSL, dataViewId, {
-        'data_stream.dataset': 'gcp.audit',
-      });
+      const filter = buildEntityDslFilter(
+        entityId,
+        GCP_DSL,
+        dataViewId,
+        {
+          'data_stream.dataset': 'gcp.audit',
+        },
+        getUserNamespacePrefix
+      );
 
       const [identity, , guard] = andParams(filter);
 
@@ -837,9 +856,15 @@ describe('search_filters', () => {
     });
 
     it('replaces the prefix clause with an exact phrase filter on the observed dataset', () => {
-      const filter = buildEntityDslFilter(entityId, GCP_DSL, dataViewId, {
-        'data_stream.dataset': 'gcp.audit',
-      });
+      const filter = buildEntityDslFilter(
+        entityId,
+        GCP_DSL,
+        dataViewId,
+        {
+          'data_stream.dataset': 'gcp.audit',
+        },
+        getUserNamespacePrefix
+      );
       const [, namespaceArm] = andParams(filter);
 
       // The namespace disjunction survives as an OR of two ordinary phrase filters — both
@@ -862,9 +887,15 @@ describe('search_filters', () => {
     });
 
     it('uses an is-one-of (phrases) filter when several dataset values were observed', () => {
-      const filter = buildEntityDslFilter(entityId, GCP_DSL, dataViewId, {
-        'data_stream.dataset': ['gcp.audit', 'gcp.firewall'],
-      });
+      const filter = buildEntityDslFilter(
+        entityId,
+        GCP_DSL,
+        dataViewId,
+        {
+          'data_stream.dataset': ['gcp.audit', 'gcp.firewall'],
+        },
+        getUserNamespacePrefix
+      );
       const [, namespaceArm] = andParams(filter);
       const orParams = namespaceArm.meta.params as Filter[];
 
@@ -901,9 +932,15 @@ describe('search_filters', () => {
     });
 
     it('never emits a clause the filter bar cannot represent', () => {
-      const withObserved = buildEntityDslFilter(entityId, GCP_DSL, dataViewId, {
-        'data_stream.dataset': 'gcp.audit',
-      });
+      const withObserved = buildEntityDslFilter(
+        entityId,
+        GCP_DSL,
+        dataViewId,
+        {
+          'data_stream.dataset': 'gcp.audit',
+        },
+        getUserNamespacePrefix
+      );
       const withoutObserved = buildEntityDslFilter(entityId, GCP_DSL, dataViewId);
 
       // `prefix` has no counterpart among is / is one of / exists, so it must never survive
@@ -944,7 +981,9 @@ describe('search_filters', () => {
         (filter?.meta.params as Filter[])[1].meta.params as Filter[];
 
       it('substitutes the observed value only into the arm whose prefix it matches', () => {
-        const arms = namespaceArm(buildEntityDslFilter(oktaId, OKTA_DSL, dataViewId, observed));
+        const arms = namespaceArm(
+          buildEntityDslFilter(oktaId, OKTA_DSL, dataViewId, observed, getUserNamespacePrefix)
+        );
 
         // `entityanalytics_okta.user` does not start with `okta`, so that arm must be dropped
         // rather than take a value it would never have matched.
@@ -955,15 +994,39 @@ describe('search_filters', () => {
         });
       });
 
+      it('rejects a value that only shares a string prefix with the arm', () => {
+        // `okta_legacy.system` starts with `okta` but its first chunk is `okta_legacy`, so it
+        // belongs to a different namespace. A naive `startsWith` test would substitute it into the
+        // `okta*` arm and silently widen the filter to an entity the user never asked about.
+        const filter = buildEntityDslFilter(
+          oktaId,
+          OKTA_DSL,
+          dataViewId,
+          { 'data_stream.dataset': 'okta_legacy.system' },
+          getUserNamespacePrefix
+        );
+
+        expect(JSON.stringify(filter)).not.toContain('okta_legacy.system');
+        expect(JSON.stringify(filter)).not.toContain('data_stream.dataset');
+      });
+
       it('does not emit the same clause twice when arms collapse onto one value', () => {
-        const arms = namespaceArm(buildEntityDslFilter(oktaId, OKTA_DSL, dataViewId, observed));
+        const arms = namespaceArm(
+          buildEntityDslFilter(oktaId, OKTA_DSL, dataViewId, observed, getUserNamespacePrefix)
+        );
         const rendered = arms.map((a) => JSON.stringify(a.query));
 
         expect(new Set(rendered).size).toBe(rendered.length);
       });
 
       it('keeps the namespace clause matchable, which dropping every prefix would not', () => {
-        const withObserved = buildEntityDslFilter(oktaId, OKTA_DSL, dataViewId, observed);
+        const withObserved = buildEntityDslFilter(
+          oktaId,
+          OKTA_DSL,
+          dataViewId,
+          observed,
+          getUserNamespacePrefix
+        );
         const withoutObserved = buildEntityDslFilter(oktaId, OKTA_DSL, dataViewId);
 
         // Without substitution the disjunction is only `event.module` phrases, and no Okta
