@@ -10,6 +10,7 @@ import type { Logger } from '@kbn/logging';
 import type { AttachmentStateManager } from '@kbn/agent-builder-server/attachments';
 import { SecurityAgentBuilderAttachments } from '../../../../common/constants';
 import { ensureAttachment } from './attachment_utils';
+import type { EntityGraphOriginEventId } from './entity_graph_origin_events';
 import type { EntityIdentifierType } from './entity_resolution';
 
 // Underscore-free stand-in for the `security.entity_graph` attachment type
@@ -35,6 +36,8 @@ interface EntityGraphAttachmentData {
   entityStoreId: string;
   timeRange: { from: string; to: string };
   attachmentLabel?: string;
+  /** Events and alerts the graph is seeded with; the graph API only fetches those it is given. */
+  originEventIds?: EntityGraphOriginEventId[];
 }
 
 /**

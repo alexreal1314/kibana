@@ -38,8 +38,8 @@ export const EntityGraphInlineContent: React.FC<
 
 /** Inner preview so `useFetchGraphData` runs under QueryClient + Kibana context. */
 const EntityGraphPreview: React.FC<{ data: EntityGraphAttachment['data'] }> = ({ data }) => {
-  const { entityStoreId, timeRange } = data;
-
+  const { entityStoreId, timeRange, originEventIds } = data;
+  console.log('originEventIds1 ', originEventIds);
   const {
     isLoading,
     isError,
@@ -47,6 +47,7 @@ const EntityGraphPreview: React.FC<{ data: EntityGraphAttachment['data'] }> = ({
   } = useFetchGraphData({
     req: {
       query: {
+        originEventIds,
         entityIds: [{ id: entityStoreId, isOrigin: true }],
         start: timeRange.from,
         end: timeRange.to,

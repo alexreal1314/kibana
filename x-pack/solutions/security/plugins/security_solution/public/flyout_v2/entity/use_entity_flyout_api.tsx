@@ -837,13 +837,14 @@ export const useEntityFlyoutApi = (): EntityFlyoutApi => {
   );
   const openEntityGraphView = useCallback(
     ({ title, origin, flyoutType, ...props }: OpenEntityGraphViewParams) => {
-      const { entityId, scopeId, entityName } = props;
+      const { entityId, scopeId, entityName, originEventIds } = props;
       writeOnOpen({
         kind: FLYOUT_DESCRIPTOR_KIND.entityGraphView,
         entityId,
         scopeId,
         entityName,
         entityType: flyoutType as string | undefined,
+        ...(originEventIds?.length ? { originEventIds } : {}),
       });
       const onClose = buildOnClose(null);
       open(

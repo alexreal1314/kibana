@@ -52,6 +52,7 @@ const resolvedOk = {
     identifier: 'alice@local',
     entityStoreId: ENTITY_ID,
   },
+  record: { 'entity.id': ENTITY_ID },
 };
 
 const resolvedTargetOk = {
@@ -61,6 +62,7 @@ const resolvedTargetOk = {
     identifier: 'laptopA',
     entityStoreId: TARGET,
   },
+  record: { 'entity.id': TARGET },
 };
 
 const sampleDoc = {

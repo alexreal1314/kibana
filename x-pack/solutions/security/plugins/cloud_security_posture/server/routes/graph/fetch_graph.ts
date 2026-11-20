@@ -18,6 +18,7 @@ import {
   enrichEntityRecords,
 } from './parse_records';
 import { fetchEntityEnrichment, type EntityEnrichmentFields } from './fetch_entity_enrichment';
+import { buildOriginEntitiesEsQuery } from './fetch_origin_entities_es_query';
 import { resolveEntitiesIndexName, addValuesToSet } from './utils';
 import type {
   EsQuery,
@@ -90,8 +91,23 @@ export const fetchGraph = async ({
   // Single index resolution upfront (null when no live index), reused by all
   // entity-store-backed fetches and the downstream enrichment query. Runs in parallel
   // with the events fetch since events hit logs/alerts indices and don't depend on it.
+  const entityStoreIndexNamePromise = resolveEntitiesIndexName(esClient, logger, spaceId);
+
+  // An entity-centered graph names no events to start from, and raw events carry no `entity.id`,
+  // so select them through the identity fields of the origin entities.
+  const originEntitiesEsQuery =
+    !hasOriginEventIds && !hasEsQuery && hasEntityIds
+      ? await buildOriginEntitiesEsQuery({
+          esClient,
+          logger,
+          entityIds,
+          entityStoreIndexName: await entityStoreIndexNamePromise,
+        })
+      : undefined;
+  const eventsEsQuery = esQuery ?? originEntitiesEsQuery;
+
   const [eventsResult, entityStoreIndexName] = await Promise.all([
-    hasOriginEventIds || hasEsQuery
+    hasOriginEventIds || hasEsQuery || originEntitiesEsQuery
       ? fetchEvents({
           esClient,
           logger,
@@ -101,7 +117,7 @@ export const fetchGraph = async ({
           showUnknownTarget,
           indexPatterns,
           spaceId,
-          esQuery,
+          esQuery: eventsEsQuery,
           pinnedIds,
           projectRouting,
           integrationRuntimeEvalsEnabled,
@@ -110,7 +126,7 @@ export const fetchGraph = async ({
           throw error;
         })
       : Promise.resolve(emptyEventsResult),
-    resolveEntitiesIndexName(esClient, logger, spaceId),
+    entityStoreIndexNamePromise,
   ]);
 
   // Relationships and pinned entities both require the entity store index.
@@ -179,6 +195,7 @@ export const fetchGraph = async ({
         })
       : new Map<string, EntityEnrichmentFields>();
 
+  console.log("asd1");
   return {
     events: enrichEventDocData(regroupEvents(eventsResult.records, enrichmentMap), enrichmentMap),
     relationships: enrichRelationshipDocData(

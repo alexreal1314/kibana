@@ -21,6 +21,8 @@ export interface EntityGraphAttachmentData {
   entityStoreId: string;
   timeRange: { from: string; to: string };
   attachmentLabel?: string;
+  /** Events and alerts the preview is seeded with; the graph API only fetches those it is given. */
+  originEventIds?: Array<{ id: string; isAlert: boolean }>;
 }
 
 export type EntityGraphAttachment = Attachment<

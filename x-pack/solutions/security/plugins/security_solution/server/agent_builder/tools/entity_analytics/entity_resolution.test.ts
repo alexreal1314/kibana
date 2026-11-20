@@ -271,7 +271,7 @@ describe('entity_resolution', () => {
       }
     });
 
-    it('returns the identity when resolved with an entityStoreId', async () => {
+    it('returns the identity and the flat resolved record when resolved with an entityStoreId', async () => {
       mockExecuteEsql.mockResolvedValueOnce(singleHostRow);
 
       const result = await requireResolvedEntity({
@@ -287,6 +287,11 @@ describe('entity_resolution', () => {
           identifierType: 'host',
           identifier: 'server1',
           entityStoreId: 'host:server1',
+        },
+        record: {
+          'entity.id': 'host:server1',
+          'entity.name': 'server1',
+          'entity.EngineMetadata.Type': 'host',
         },
       });
     });

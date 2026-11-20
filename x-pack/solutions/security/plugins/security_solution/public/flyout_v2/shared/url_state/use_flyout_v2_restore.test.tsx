@@ -609,6 +609,26 @@ describe('useFlyoutV2RestoreFromUrl', () => {
       );
     });
 
+    it('restores the origin events and alerts the graph view was opened with', () => {
+      const originEventIds = [
+        { id: 'gcp-exec-evt-9201', isAlert: false },
+        { id: 'alert-source-evt-1', isAlert: true },
+      ];
+      renderRestore(
+        buildUrl([
+          { ...graphDescriptor, origin: FLYOUT_ORIGIN.AI_CHAT_ENTITY_ATTACHMENT, originEventIds },
+        ])
+      );
+
+      act(() => {
+        jest.runAllTimers();
+      });
+
+      expect(mockFlyoutApi.openEntityGraphView).toHaveBeenCalledWith(
+        expect.objectContaining({ originEventIds })
+      );
+    });
+
     it('keeps the descriptor origin for the entry point when the restore overrides the origin on app mount', () => {
       renderRestore(
         buildUrl([{ ...graphDescriptor, origin: FLYOUT_ORIGIN.AI_CHAT_ENTITY_ATTACHMENT }])

@@ -25,7 +25,11 @@ jest.mock('../../../../document/tools/graph/components/graph_visualization', () 
 const mockOnTelemetryEvent = jest.fn();
 const mockOpen = jest.fn();
 
-const renderGraphView = (scopeId: string, entryPoint: GraphViewProps['entryPoint']) =>
+const renderGraphView = (
+  scopeId: string,
+  entryPoint: GraphViewProps['entryPoint'],
+  originEventIds?: GraphViewProps['originEventIds']
+) =>
   render(
     <TestProviders>
       <GraphView
@@ -34,6 +38,7 @@ const renderGraphView = (scopeId: string, entryPoint: GraphViewProps['entryPoint
         entityName="entity-name"
         onShowEntity={jest.fn()}
         entryPoint={entryPoint}
+        originEventIds={originEventIds}
       />
     </TestProviders>
   );
@@ -83,6 +88,18 @@ describe('<GraphView />', () => {
       expect.objectContaining({ mode: 'entity', entryPoint: 'entity_data_grid' })
     );
     expect(openGroupedPanel().props.onTelemetryEvent).toBe(mockOnTelemetryEvent);
+  });
+
+  it('passes the origin events and alerts on to the graph it renders', () => {
+    const originEventIds = [
+      { id: 'gcp-exec-evt-9201', isAlert: false },
+      { id: 'alert-source-evt-1', isAlert: true },
+    ];
+    renderGraphView('some-flyout-scope', 'ai_chat_attachment', originEventIds);
+
+    expect(jest.mocked(GraphVisualization).mock.calls[0][0]).toEqual(
+      expect.objectContaining({ mode: 'entity', originEventIds })
+    );
   });
 
   it('does not fall back to an entry point when none is given', () => {

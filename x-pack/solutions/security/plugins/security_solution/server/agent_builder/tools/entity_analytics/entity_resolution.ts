@@ -341,7 +341,12 @@ export const resolveSingleEntity = async ({
 };
 
 type RequireResolvedEntityResult =
-  | { ok: true; identity: EntityIdentity & { entityStoreId: string } }
+  | {
+      ok: true;
+      identity: EntityIdentity & { entityStoreId: string };
+      /** The resolved Entity Store row as a flat `field -> value` map. */
+      record: Record<string, unknown>;
+    }
   | { ok: false; result: ErrorResult | OtherResult };
 
 /**
@@ -401,5 +406,8 @@ export const requireResolvedEntity = async ({
       ...resolved.identity,
       entityStoreId: resolved.identity.entityStoreId,
     },
+    record: Object.fromEntries(
+      resolved.columns.map(({ name }, index) => [name, resolved.values[0][index]])
+    ),
   };
 };

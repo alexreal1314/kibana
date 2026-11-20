@@ -18,6 +18,7 @@ import {
   enrichEntityRecords,
 } from './parse_records';
 import { fetchEntityEnrichment } from './fetch_entity_enrichment';
+import { buildOriginEntitiesEsQuery } from './fetch_origin_entities_es_query';
 import { resolveEntitiesIndexName } from './utils';
 import type { EventEdge, RelationshipEdge, EntityRecord } from './types';
 
@@ -25,6 +26,7 @@ jest.mock('./fetch_events_graph');
 jest.mock('./fetch_entity_relationships_graph');
 jest.mock('./parse_records');
 jest.mock('./fetch_entity_enrichment');
+jest.mock('./fetch_origin_entities_es_query');
 jest.mock('./utils', () => ({
   ...jest.requireActual('./utils'),
   resolveEntitiesIndexName: jest.fn(),
@@ -35,6 +37,12 @@ const mockedFetchEntityRelationships = fetchEntityRelationships as jest.MockedFu
   typeof fetchEntityRelationships
 >;
 const mockedFetchEntities = fetchEntities as jest.MockedFunction<typeof fetchEntities>;
+const mockedBuildOriginEntitiesEsQuery = buildOriginEntitiesEsQuery as jest.MockedFunction<
+  typeof buildOriginEntitiesEsQuery
+>;
+const mockedResolveEntitiesIndexName = resolveEntitiesIndexName as jest.MockedFunction<
+  typeof resolveEntitiesIndexName
+>;
 const mockedFetchEntityEnrichment = fetchEntityEnrichment as jest.MockedFunction<
   typeof fetchEntityEnrichment
 >;
@@ -206,6 +214,73 @@ describe('fetchGraph', () => {
     await fetchGraph({ ...baseParams, originEventIds: [], esQuery });
 
     expect(mockedFetchEvents).toHaveBeenCalledTimes(1);
+  });
+
+  describe('events of an origin entity', () => {
+    const originEntityIds = [{ id: 'user:alice@local', isOrigin: true }];
+    const derivedEsQuery = { bool: { should: [{ term: { 'user.name': 'alice' } }] } };
+
+    beforeEach(() => {
+      mockedResolveEntitiesIndexName.mockResolvedValue('entities-index');
+      mockedBuildOriginEntitiesEsQuery.mockResolvedValue(derivedEsQuery);
+    });
+
+    it('fetches the events matching the origin entity when only entityIds are given', async () => {
+      await fetchGraph({ ...baseParams, originEventIds: [], entityIds: originEntityIds });
+
+      expect(mockedBuildOriginEntitiesEsQuery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          entityIds: originEntityIds,
+          entityStoreIndexName: 'entities-index',
+        })
+      );
+      expect(mockedFetchEvents).toHaveBeenCalledWith(
+        expect.objectContaining({ esQuery: derivedEsQuery })
+      );
+    });
+
+    it('returns the events found for the origin entity', async () => {
+      const result = await fetchGraph({
+        ...baseParams,
+        originEventIds: [],
+        entityIds: originEntityIds,
+      });
+
+      expect(result.events).toEqual(mockEventRecords);
+    });
+
+    it('does not derive a query when origin event ids are given', async () => {
+      await fetchGraph({ ...baseParams, entityIds: originEntityIds });
+
+      expect(mockedBuildOriginEntitiesEsQuery).not.toHaveBeenCalled();
+    });
+
+    it('does not replace a query the caller supplied', async () => {
+      const esQuery = { bool: { filter: [{ term: { 'host.name': 'web-01' } }] } };
+
+      await fetchGraph({
+        ...baseParams,
+        originEventIds: [],
+        esQuery,
+        entityIds: originEntityIds,
+      });
+
+      expect(mockedBuildOriginEntitiesEsQuery).not.toHaveBeenCalled();
+      expect(mockedFetchEvents).toHaveBeenCalledWith(expect.objectContaining({ esQuery }));
+    });
+
+    it('does not fetch events when the origin entity yields no query', async () => {
+      mockedBuildOriginEntitiesEsQuery.mockResolvedValue(undefined);
+
+      const result = await fetchGraph({
+        ...baseParams,
+        originEventIds: [],
+        entityIds: originEntityIds,
+      });
+
+      expect(mockedFetchEvents).not.toHaveBeenCalled();
+      expect(result.events).toEqual([]);
+    });
   });
 
   it('should call fetchEntityRelationships when entityIds are provided', async () => {

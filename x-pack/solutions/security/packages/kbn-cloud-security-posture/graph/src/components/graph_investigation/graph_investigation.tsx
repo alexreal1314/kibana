@@ -61,6 +61,11 @@ import type { NodeProps, NodeViewModel } from '../types';
 import { isEventNode, isRelationshipNode, showErrorToast } from '../utils';
 import { GRAPH_SCOPE_ID } from '../constants';
 import { useGraphFilters } from '../filters/use_graph_filters';
+import {
+  getEntityFilterSpec,
+  getSourceFieldsFromNode,
+  toggleEntityFilterSpec,
+} from '../popovers/node_expand/get_entity_expand_items';
 import { getEntityTimelineFilter } from './entity_timeline_filters';
 import type {
   GraphExpansionAction,
@@ -352,7 +357,6 @@ export const GraphInvestigation = memo<GraphInvestigationProps>(
     );
     const defaultFilters = useMemo<Filter[]>(() => {
       if (!dataView?.id) return [];
-
       // Event mode: show origin event/alert IDs as non-interactive filter pills.
       if (originEventIds && originEventIds.length > 0) {
         const eventIds = originEventIds.map(({ id }) => id);
@@ -516,6 +520,29 @@ export const GraphInvestigation = memo<GraphInvestigationProps>(
       }
       return filters;
     }, [data?.nodes, dataView.id, entityIds, euidApi, originEventIds]);
+
+    // Entity mode: the graph API only returns events when it is given a query, and the default
+    // origin pills above are display-only. Once an origin entity arrives, add the same filters the
+    // user would get from "Show this entity's actions" and "Show actions done to this entity", so
+    // its events and alerts are fetched. Runs once per origin entity for the life of this graph, so
+    // a chip the user removes is not added back.
+    const seededOriginEntityIds = useRef(new Set<string>());
+    useEffect(() => {
+      // The EUID API hydrates lazily; seeding earlier would fall back to broader identity fields.
+      if (originEventIds?.length || !euidApi) return;
+      for (const { id, isOrigin } of entityIds ?? []) {
+        if (!isOrigin || seededOriginEntityIds.current.has(id)) continue;
+        const node = data?.nodes.find((candidate) => candidate.id === id);
+        if (!node || !isEntityNode(node)) continue;
+
+        const sourceFields = getSourceFieldsFromNode(node);
+        for (const role of ['actor', 'target'] as const) {
+          const spec = getEntityFilterSpec(id, sourceFields, euidApi, role);
+          if (spec) toggleEntityFilterSpec(scopeId, `${id}|${role}`, spec, role, 'show');
+        }
+        seededOriginEntityIds.current.add(id);
+      }
+    }, [data?.nodes, entityIds, euidApi, originEventIds, scopeId]);
 
     const onInvestigateInTimelineCallback = useCallback(() => {
       const query = { ...kquery };
@@ -812,6 +839,7 @@ export const GraphInvestigation = memo<GraphInvestigationProps>(
       return (
         data?.nodes.map((node) => {
           if (isEntityNode(node)) {
+            console.log("node2 ", node);
             const nodeIps = node.ips || [];
             const nodeCountryCodes = node.countryCodes || [];
             const isOrigin = originEntityIdsSet.has(node.id);
@@ -837,6 +865,11 @@ export const GraphInvestigation = memo<GraphInvestigationProps>(
               'documentsData' in node && Array.isArray(node.documentsData)
                 ? node.documentsData.flatMap((d) => (d.event ? d.event.id : []))
                 : [];
+            console.log("node1 ", node);
+            console.log("docEventIds1 ", docEventIds);
+            console.log("originEventIdsSet1 ", originEventIdsSet);
+            console.log("originAlertIdsSet1 ", originAlertIdsSet);
+            console.log("originEntityIdsSet1 ", originEntityIdsSet);
             return {
               ...node,
               isOrigin: docEventIds.some((id) => originEventIdsSet.has(id)),

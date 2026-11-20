@@ -23,6 +23,10 @@ import {
   buildEntityGraphAttachmentId,
   ensureEntityGraphAttachment,
 } from './entity_graph_attachment_utils';
+import {
+  ENTITY_GRAPH_ORIGIN_EVENTS_LIMIT,
+  fetchEntityGraphOriginEventIds,
+} from './entity_graph_origin_events';
 import { createToolTelemetryTracker } from './tool_telemetry_tracker';
 
 const schema = lazySchema(() =>
@@ -55,7 +59,7 @@ export const getEntityGraphTool = (
   return {
     id: SECURITY_GET_ENTITY_GRAPH_TOOL_ID,
     type: ToolType.builtin,
-    description: `Render the relationship-graph preview for a single security entity (host, user, service, generic) from the Entity Store. Use this when the user asks to see the graph for an entity or how an entity is connected to other entities, events, or alerts (e.g. "show me the graph for this host", "how is this user connected?", "visualize relationships for host:server1"). Read-only — it does not modify anything.
+    description: `Render the relationship-graph preview for a single security entity (host, user, service, generic) from the Entity Store. Use this when the user asks to see the graph for an entity or how an entity is connected to other entities, events, or alerts (e.g. "show me the graph for this host", "how is this user connected?", "visualize relationships for host:server1"). Read-only — it does not modify anything. The preview includes up to ${ENTITY_GRAPH_ORIGIN_EVENTS_LIMIT} of the entity's most recent events and alerts from the last 30 days, but only those that have an \`event.id\`.
 
 This tool resolves the entity, then stores a \`security.entity_graph\` attachment (creating new or updating existing) and returns an \`other\` result containing a pre-formatted \`renderTag\` string. To show the interactive graph preview inline, copy that \`renderTag\` string VERBATIM onto its own line in your reply, followed by a blank line, before your prose. Do NOT assemble the tag yourself from \`attachmentId\` and \`version\`, and do NOT substitute the id with anything derived from the user's prompt.
 
@@ -136,6 +140,17 @@ When the id/name resolves to multiple candidate entities, no attachment is store
         const { identifierType, identifier, entityStoreId } = resolved.identity;
         const attachmentLabel = `${identifierType}: ${identifier}`;
 
+        // Raw events do not carry the entity id, so the graph API only fetches events and alerts
+        // when it is told which ones to start from.
+        const originEventIds = await fetchEntityGraphOriginEventIds({
+          esClient: client,
+          logger,
+          spaceId,
+          identifierType,
+          entityRecord: resolved.record,
+          timeRange: DEFAULT_ENTITY_GRAPH_TIME_RANGE,
+        });
+        console.log('originEventIds2 ', originEventIds);
         const attachmentResult = await ensureEntityGraphAttachment({
           attachments,
           id: buildEntityGraphAttachmentId(identifierType, entityStoreId),
@@ -145,6 +160,7 @@ When the id/name resolves to multiple candidate entities, no attachment is store
             entityStoreId,
             timeRange: DEFAULT_ENTITY_GRAPH_TIME_RANGE,
             attachmentLabel,
+            ...(originEventIds.length > 0 ? { originEventIds } : {}),
           },
           description: attachmentLabel,
           logger,

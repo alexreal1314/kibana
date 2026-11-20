@@ -286,6 +286,14 @@ export const entityGraphViewDescriptorSchema = lazySchema(() =>
      * backward compatibility with URLs encoded before this field existed.
      */
     entityType: str.optional(),
+    /**
+     * Events and alerts the graph was opened with (for example from the AI chat preview), so a
+     * refresh restores the same graph. Optional: absent when the graph is centered on the entity only.
+     */
+    originEventIds: z
+      .array(z.object({ id: str, isAlert: z.boolean() }))
+      .max(MAX_ARRAY_SIZE)
+      .optional(),
   })
 );
 

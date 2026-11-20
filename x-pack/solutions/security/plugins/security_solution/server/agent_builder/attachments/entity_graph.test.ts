@@ -50,6 +50,25 @@ describe('createEntityGraphAttachmentType', () => {
       expect(result.valid).toBe(false);
     });
 
+    it('accepts stored origin events and alerts', async () => {
+      const result = await attachmentType.validate({
+        ...validData,
+        originEventIds: [
+          { id: 'gcp-exec-evt-9201', isAlert: false },
+          { id: 'alert-source-evt-1', isAlert: true },
+        ],
+      });
+      expect(result.valid).toBe(true);
+    });
+
+    it('rejects more origin events than the preview keeps', async () => {
+      const result = await attachmentType.validate({
+        ...validData,
+        originEventIds: Array.from({ length: 51 }, (_, i) => ({ id: `evt-${i}`, isAlert: false })),
+      });
+      expect(result.valid).toBe(false);
+    });
+
     it('rejects an unknown identifier type', async () => {
       const result = await attachmentType.validate({ ...validData, identifierType: 'widget' });
       expect(result.valid).toBe(false);
@@ -63,6 +82,33 @@ describe('createEntityGraphAttachmentType', () => {
   });
 
   describe('format', () => {
+    it('tells the agent how many events and alerts the preview includes, only when there are some', async () => {
+      const format = async (data: typeof validData & { originEventIds?: unknown[] }) => {
+        const formatted = await attachmentType.format(
+          {
+            id: 'security.graph:host:abc',
+            type: SecurityAgentBuilderAttachments.entityGraph,
+            data,
+          },
+          formatContext
+        );
+        const representation = await formatted.getRepresentation?.();
+        return representation?.type === 'text' ? representation.value : '';
+      };
+
+      expect(await format(validData)).not.toContain('Events and alerts included');
+      expect(
+        await format({
+          ...validData,
+          originEventIds: [
+            { id: 'a', isAlert: false },
+            { id: 'b', isAlert: false },
+            { id: 'c', isAlert: true },
+          ],
+        })
+      ).toContain('Events and alerts included in the preview: 2 events, 1 alerts');
+    });
+
     it('produces a text representation with the entity and time window', async () => {
       const attachment: Attachment<SecurityAgentBuilderAttachments.entityGraph, typeof validData> =
         {

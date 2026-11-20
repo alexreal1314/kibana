@@ -587,6 +587,7 @@ export const openDescriptorAsStart = (
         entityId: d.entityId,
         scopeId: d.scopeId,
         entityName: d.entityName,
+        originEventIds: d.originEventIds,
         ...originParams,
         // Read the descriptor's own origin, not the restore override: a cold restore carries none,
         // so nothing is reported, while a descriptor created by an in-session action (such as the

@@ -80,6 +80,26 @@ describe('EntityGraphInlineContent', () => {
     );
   });
 
+  it('seeds the graph with the stored origin events and alerts so they are fetched', () => {
+    const originEventIds = [
+      { id: 'gcp-exec-evt-9201', isAlert: false },
+      { id: 'alert-source-evt-1', isAlert: true },
+    ];
+    renderInline({ ...hostData, originEventIds });
+    expect(mockUseFetchGraphData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        req: {
+          query: {
+            originEventIds,
+            entityIds: [{ id: 'host:server1', isOrigin: true }],
+            start: 'now-30d',
+            end: 'now',
+          },
+        },
+      })
+    );
+  });
+
   it.each([
     ['loading', { isLoading: true, isError: false, data: undefined }, 'loading'],
     ['error', { isLoading: false, isError: true, data: undefined }, 'error'],

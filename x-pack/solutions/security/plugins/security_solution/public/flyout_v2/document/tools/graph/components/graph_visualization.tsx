@@ -109,6 +109,9 @@ interface EventGraphVisualizationProps extends GraphNodeCallbacks {
   isAlert: boolean;
 }
 
+/** Event or alert a graph is seeded with; the graph API only fetches the ones it is given. */
+export type GraphOriginEventIds = Array<{ id: string; isAlert: boolean }>;
+
 /** Props for entity mode — drives the graph from an Entity Store entity ID */
 interface EntityGraphVisualizationProps extends GraphNodeCallbacks {
   mode: 'entity';
@@ -118,6 +121,12 @@ interface EntityGraphVisualizationProps extends GraphNodeCallbacks {
   graphScopeId?: string;
   /** Entity Store v2 entity ID (`entity.id`) to center the graph on */
   entityId: string;
+  /**
+   * Events and alerts attributable to the entity that the graph is seeded with, next to the entity.
+   * Raw events carry no `entity.id`, so they can't be found from the entity id alone. Omitted when
+   * the graph is opened without a known set, in which case it is centered on the entity only.
+   */
+  originEventIds?: GraphOriginEventIds;
   /**
    * Where the user opened the graph from, for telemetry. `undefined` is for a graph that was not
    * opened by a user action in this session (restored from the URL): no telemetry is reported.
@@ -334,6 +343,9 @@ export const GraphVisualization: React.FC<GraphVisualizationProps> = memo((props
                 : {
                     dataView,
                     entityIds: [{ id: props.entityId, isOrigin: true }],
+                    ...(props.originEventIds?.length
+                      ? { originEventIds: props.originEventIds }
+                      : {}),
                     timeRange: {
                       from: entityGraphTimeRange.from,
                       to: entityGraphTimeRange.to,

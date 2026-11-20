@@ -65,6 +65,11 @@ export interface EntityAnalyticsFlyoutNavigationState {
    */
   left?: {
     path?: Partial<EntityDetailsPath>;
+    /**
+     * Events and alerts to seed the graph view with, so it shows the ones an AI chat preview
+     * showed. Only read for the graph view tab.
+     */
+    originEventIds?: Array<{ id: string; isAlert: boolean }>;
   };
 }
 
@@ -177,6 +182,7 @@ const getEntityToolDescriptor = (
             scopeId,
             entityName,
             entityType,
+            ...(left?.originEventIds?.length ? { originEventIds: left.originEventIds } : {}),
           }
         : null;
     case 'resolution_group':
@@ -353,16 +359,18 @@ export const buildEntityRightPanel = (
 export const buildEntityLeftPanel = ({
   identifier,
   path,
+  originEventIds,
 }: {
   identifier: EntityAttachmentIdentifier;
   path: Partial<EntityDetailsPath>;
+  originEventIds?: Array<{ id: string; isAlert: boolean }>;
 }): EntityAnalyticsFlyoutNavigationState['left'] | null => {
   const { identifierType, entityStoreId } = identifier;
   if (!entityStoreId || !isFlyoutCapableIdentifierType(identifierType)) {
     return null;
   }
 
-  return { path };
+  return { path, ...(originEventIds?.length ? { originEventIds } : {}) };
 };
 
 const openSecurityAgentBuilderChatPreservingConversation = (

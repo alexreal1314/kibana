@@ -224,6 +224,106 @@ describe('getEntityGraphTool', () => {
       });
     });
 
+    describe('origin events', () => {
+      const livenessProbeEmail = 'liveness-probe@prod-billing-project.iam.gserviceaccount.com';
+      const livenessProbeHost = 'gke-prod-cluster-billing-api-7f3a';
+      const livenessProbeEuid = `user:${livenessProbeEmail}@${livenessProbeHost}@local`;
+      const livenessProbeUserHit = {
+        columns: [
+          { name: 'entity.id', type: 'keyword' },
+          { name: 'entity.name', type: 'keyword' },
+          { name: 'entity.EngineMetadata.Type', type: 'keyword' },
+          { name: 'entity.namespace', type: 'keyword' },
+          { name: 'user.email', type: 'keyword' },
+          { name: 'user.name', type: 'keyword' },
+          { name: 'host.id', type: 'keyword' },
+          { name: 'host.name', type: 'keyword' },
+        ],
+        values: [
+          [
+            livenessProbeEuid,
+            `${livenessProbeEmail}@${livenessProbeHost}`,
+            'user',
+            'local',
+            livenessProbeEmail,
+            livenessProbeEmail,
+            livenessProbeHost,
+            livenessProbeHost,
+          ],
+        ],
+      };
+      const userAttachmentId = buildEntityGraphAttachmentId('user', livenessProbeEuid);
+
+      const runUserHandler = async () => {
+        mockExecuteEsql.mockResolvedValueOnce(livenessProbeUserHit);
+        const context = createToolHandlerContext(mockRequest, mockEsClient, mockLogger);
+        (context.attachments.getAttachmentRecord as jest.Mock).mockReturnValueOnce(undefined);
+        (context.attachments.add as jest.Mock).mockResolvedValueOnce({
+          id: userAttachmentId,
+          current_version: 1,
+        });
+        await tool.handler({ entityType: 'user', entityId: livenessProbeEuid }, context);
+        return context;
+      };
+
+      it('stores the ids of events and alerts attributable to the entity as originEventIds', async () => {
+        mockEsClient.asCurrentUser.search.mockResolvedValueOnce({
+          hits: {
+            hits: [
+              {
+                _index: '.ds-logs-gcp.audit-default-2026.11.18-000001',
+                fields: { 'event.id': ['gcp-exec-evt-9201'] },
+              },
+              {
+                _index: '.internal.alerts-security.alerts-default-000001',
+                fields: { 'event.id': ['alert-source-evt-1'] },
+              },
+            ],
+          },
+        } as never);
+
+        const context = await runUserHandler();
+
+        expect(context.attachments.add).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              entityStoreId: livenessProbeEuid,
+              originEventIds: [
+                { id: 'gcp-exec-evt-9201', isAlert: false },
+                { id: 'alert-source-evt-1', isAlert: true },
+              ],
+            }),
+          })
+        );
+      });
+
+      it('finds events by the identity fields of the entity record, not by a literal entity.id', async () => {
+        mockEsClient.asCurrentUser.search.mockResolvedValueOnce({ hits: { hits: [] } } as never);
+
+        await runUserHandler();
+
+        expect(mockEsClient.asCurrentUser.search).toHaveBeenCalledTimes(1);
+        const searchRequest = mockEsClient.asCurrentUser.search.mock.calls[0][0];
+        const serializedQuery = JSON.stringify(searchRequest?.query);
+        expect(serializedQuery).toContain(livenessProbeEmail);
+        expect(serializedQuery).toContain(livenessProbeHost);
+        expect(serializedQuery).not.toContain('"entity.id"');
+        expect(searchRequest?.index).toEqual(
+          expect.arrayContaining(['.alerts-security.alerts-default', 'logs-*'])
+        );
+      });
+
+      it('still renders the preview, without originEventIds, when the event lookup fails', async () => {
+        mockEsClient.asCurrentUser.search.mockRejectedValueOnce(new Error('security_exception'));
+
+        const context = await runUserHandler();
+
+        expect(context.attachments.add).toHaveBeenCalledTimes(1);
+        const { data } = (context.attachments.add as jest.Mock).mock.calls[0][0];
+        expect(data).not.toHaveProperty('originEventIds');
+      });
+    });
+
     it('resolves a bare id supplied from an attachment via the RLIKE prefix match', async () => {
       mockExecuteEsql
         // 1. exact id — miss

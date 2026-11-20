@@ -26,6 +26,7 @@ import { useFlyoutApi } from '../../../../use_flyout_api';
 import { cellActionRenderer } from '../../../../shared/components/cell_actions';
 import { ToolsFlyoutHeader } from '../../../../shared/components/tools_flyout_header';
 import { GraphVisualization } from '../../../../document/tools/graph/components/graph_visualization';
+import type { GraphOriginEventIds } from '../../../../document/tools/graph/components/graph_visualization';
 import { useFlyoutSessionContext } from '../../../../session_context';
 import {
   FLYOUT_ORIGIN,
@@ -57,6 +58,11 @@ export interface GraphViewProps {
    * opened by a user action in this session (restored from the URL): no telemetry is reported.
    */
   entryPoint: GraphEntryPoint | undefined;
+  /**
+   * Events and alerts of the entity to seed the graph with, such as those the AI chat preview
+   * showed, so this view shows the same ones.
+   */
+  originEventIds?: GraphOriginEventIds;
 }
 
 /**
@@ -72,6 +78,7 @@ export const GraphView = memo(
     onShowEntity,
     onShowOriginatingEntity,
     entryPoint,
+    originEventIds,
   }: GraphViewProps) => {
     const open = useOpenFlyout();
     const { historyKey } = useFlyoutSessionContext();
@@ -150,6 +157,7 @@ export const GraphView = memo(
             mode="entity"
             scopeId={scopeId}
             entityId={entityId}
+            originEventIds={originEventIds}
             entryPoint={entryPoint}
             onShowDocument={onShowDocument}
             onShowEntity={onShowEntity}

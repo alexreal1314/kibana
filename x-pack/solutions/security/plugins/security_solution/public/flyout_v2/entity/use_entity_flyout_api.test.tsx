@@ -654,6 +654,27 @@ describe('useEntityFlyoutApi', () => {
     expect(mockBuildOnClose).toHaveBeenCalledWith(null);
   });
 
+  it('openEntityGraphView writes the origin events and alerts so a refresh restores the same graph', () => {
+    const originEventIds = [
+      { id: 'gcp-exec-evt-9201', isAlert: false },
+      { id: 'alert-source-evt-1', isAlert: true },
+    ];
+    const { result } = renderHook(() => useEntityFlyoutApi());
+    result.current.openEntityGraphView({
+      entityId: 'entity-1',
+      scopeId: 'scope-1',
+      entityName: 'entity-name',
+      onShowEntity: jest.fn(),
+      entryPoint: 'ai_chat_attachment',
+      originEventIds,
+    });
+
+    expect(mockWriteOnOpen).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: FLYOUT_DESCRIPTOR_KIND.entityGraphView, originEventIds })
+    );
+    expect(getOpenedContentProps()).toEqual(expect.objectContaining({ originEventIds }));
+  });
+
   it('openEntityGraphView hands the entry point to the graph view it renders', () => {
     const { result } = renderHook(() => useEntityFlyoutApi());
     result.current.openEntityGraphView({

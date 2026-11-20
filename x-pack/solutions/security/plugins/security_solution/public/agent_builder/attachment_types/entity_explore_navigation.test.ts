@@ -273,6 +273,48 @@ describe('entity_explore_navigation', () => {
       ]);
     });
 
+    it('carries the origin events and alerts onto the entityGraphView descriptor', () => {
+      const originEventIds = [
+        { id: 'gcp-exec-evt-9201', isAlert: false },
+        { id: 'alert-source-evt-1', isAlert: true },
+      ];
+      const [graphDescriptor] =
+        buildEntityFlyoutV2NavigationState({
+          preview: [],
+          left: { path: { tab: EntityDetailsLeftPanelTab.GRAPH_VIEW }, originEventIds },
+          right: {
+            id: 'user-panel',
+            params: {
+              userName: 'alice',
+              entityId: 'user:alice',
+              scopeId: 'agent-builder-entity-card',
+            },
+          },
+        }) ?? [];
+
+      expect(graphDescriptor).toEqual(
+        expect.objectContaining({ kind: 'entityGraphView', originEventIds })
+      );
+    });
+
+    it('leaves originEventIds off the entityGraphView descriptor when there are none', () => {
+      const [graphDescriptor] =
+        buildEntityFlyoutV2NavigationState({
+          preview: [],
+          left: { path: { tab: EntityDetailsLeftPanelTab.GRAPH_VIEW }, originEventIds: [] },
+          right: {
+            id: 'user-panel',
+            params: {
+              userName: 'alice',
+              entityId: 'user:alice',
+              scopeId: 'agent-builder-entity-card',
+            },
+          },
+        }) ?? [];
+
+      expect(graphDescriptor).not.toHaveProperty('originEventIds');
+    });
+
     it('forwards the risk_inputs resolution subTab onto the entityRiskInputs descriptor', () => {
       expect(
         buildEntityFlyoutV2NavigationState({

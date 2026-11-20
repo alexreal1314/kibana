@@ -68,6 +68,7 @@ const buildEntityGraphFlyout = (
   const left = buildEntityLeftPanel({
     identifier,
     path: { tab: EntityDetailsLeftPanelTab.GRAPH_VIEW },
+    originEventIds: data.originEventIds,
   });
   if (!left) {
     return null;

@@ -9,6 +9,7 @@ import type { AttachmentTypeDefinition } from '@kbn/agent-builder-server/attachm
 import { IdentifierType } from '../../../common/api/entity_analytics/common/common.gen';
 import { SecurityAgentBuilderAttachments } from '../../../common/constants';
 import { SECURITY_GET_ENTITY_GRAPH_TOOL_ID } from '../tools';
+import { ENTITY_GRAPH_ORIGIN_EVENTS_LIMIT } from '../tools/entity_analytics/entity_graph_origin_events';
 import { securityAttachmentDataSchema } from './security_attachment_data_schema';
 
 const entityGraphAttachmentDataSchema = lazySchema(() =>
@@ -21,17 +22,31 @@ const entityGraphAttachmentDataSchema = lazySchema(() =>
       from: z.string().min(1),
       to: z.string().min(1),
     }),
+    /** Events and alerts the graph preview is seeded with. */
+    originEventIds: z
+      .array(z.object({ id: z.string().min(1).max(512), isAlert: z.boolean() }))
+      .max(ENTITY_GRAPH_ORIGIN_EVENTS_LIMIT)
+      .optional(),
   })
 );
 
 type EntityGraphAttachmentData = z.infer<typeof entityGraphAttachmentDataSchema>;
 
 const formatEntityGraphForAgent = (id: string, data: EntityGraphAttachmentData): string => {
-  const { identifierType, identifier, entityStoreId, timeRange } = data;
+  const { identifierType, identifier, entityStoreId, timeRange, originEventIds = [] } = data;
+  const alertCount = originEventIds.filter(({ isAlert }) => isAlert).length;
   return [
     `Relationship graph preview (attachment id: ${id})`,
     `Entity: ${identifierType} "${identifier}" (${entityStoreId})`,
     `Time window: ${timeRange.from} → ${timeRange.to}`,
+    // Omitted when empty: no ids can also mean the lookup failed, which is not "no events".
+    ...(originEventIds.length > 0
+      ? [
+          `Events and alerts included in the preview: ${
+            originEventIds.length - alertCount
+          } events, ${alertCount} alerts`,
+        ]
+      : []),
   ].join('\n');
 };
 

@@ -274,6 +274,22 @@ describe('GraphVisualization', () => {
       expect(initialState.originEventIds).toBeUndefined();
     });
 
+    it('seeds the graph with the given origin events and alerts next to the origin entity', async () => {
+      const originEventIds = [
+        { id: 'gcp-exec-evt-9201', isAlert: false },
+        { id: 'alert-source-evt-1', isAlert: true },
+      ];
+      render(<GraphVisualization {...ENTITY_PROPS} originEventIds={originEventIds} />);
+
+      await waitFor(() => {
+        expect(GraphInvestigation).toHaveBeenCalledTimes(1);
+      });
+
+      const { initialState } = jest.mocked(GraphInvestigation).mock.calls[0][0];
+      expect(initialState.originEventIds).toEqual(originEventIds);
+      expect(initialState.entityIds).toEqual([{ id: 'entity-1', isOrigin: true }]);
+    });
+
     it('passes a rolling 30-day timeRange', async () => {
       render(<GraphVisualization {...ENTITY_PROPS} />);
 
